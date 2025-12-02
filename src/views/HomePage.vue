@@ -2,20 +2,22 @@
   <ion-page>
     <ion-menu content-id="main-content">
       <ion-header>
-        <ion-toolbar>
+        <ion-toolbar color="primary">
           <ion-title>Lists</ion-title>
           <ion-buttons slot="end">
              <ion-button @click="presentAddListAlert">
-                <ion-icon :icon="add"></ion-icon>
+                <ion-icon :icon="addCircleOutline"></ion-icon>
              </ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
       <ion-content>
-        <ion-list>
+        <ion-list lines="none">
           <ion-menu-toggle :auto-hide="false" v-for="(list, index) in lists" :key="index">
-            <ion-item button @click="selectedListIndex = index" :color="selectedListIndex === index ? 'light' : ''">
+            <ion-item button @click="selectedListIndex = index" :color="selectedListIndex === index ? 'secondary' : ''" :detail="false" class="list-item">
+              <ion-icon slot="start" :icon="listOutline"></ion-icon>
               <ion-label>{{ list.name }}</ion-label>
+              <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">{{ list.items.length }}</ion-badge>
             </ion-item>
           </ion-menu-toggle>
            <ion-item v-if="lists.length === 0">
@@ -27,20 +29,20 @@
 
     <div class="ion-page" id="main-content">
       <ion-header :translucent="true">
-        <ion-toolbar>
+        <ion-toolbar class="gradient-toolbar">
           <ion-buttons slot="start">
-            <ion-menu-button></ion-menu-button>
+            <ion-menu-button color="light"></ion-menu-button>
           </ion-buttons>
           <ion-title>{{ currentList ? currentList.name : 'My Todos' }}</ion-title>
           <ion-buttons slot="end">
-            <ion-button router-link="/settings">
+            <ion-button router-link="/settings" color="light">
               <ion-icon :icon="settingsOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
 
-      <ion-content :fullscreen="true">
+      <ion-content :fullscreen="true" class="ion-padding-top">
         <ion-header collapse="condense">
           <ion-toolbar>
             <ion-title size="large">{{ currentList ? currentList.name : 'My Todos' }}</ion-title>
@@ -52,31 +54,49 @@
         </ion-refresher>
 
         <div class="ion-padding" v-if="!isAuthenticated">
-          <ion-text color="medium" class="ion-text-center">
-            <p>Please connect to Dropbox in Settings to manage your todos.</p>
-          </ion-text>
-          <ion-button expand="block" router-link="/settings">Go to Settings</ion-button>
+          <ion-card class="welcome-card">
+            <ion-card-header>
+              <ion-card-title>Welcome to Todo App</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <p>Please connect to Dropbox in Settings to manage your todos.</p>
+              <ion-button expand="block" router-link="/settings" class="ion-margin-top" color="secondary">Go to Settings</ion-button>
+            </ion-card-content>
+          </ion-card>
         </div>
 
-        <div v-else-if="lists.length === 0" class="ion-padding ion-text-center">
+        <div v-else-if="lists.length === 0" class="ion-padding ion-text-center empty-state">
+           <ion-icon :icon="documentsOutline" size="large" color="medium"></ion-icon>
            <ion-text color="medium">
-            <p>No lists found. Open the menu to create one!</p>
+            <h3>No lists found</h3>
+            <p>Open the menu to create one!</p>
           </ion-text>
-          <ion-button @click="presentAddListAlert">Create List</ion-button>
+          <ion-button @click="presentAddListAlert" color="tertiary">Create List</ion-button>
         </div>
 
-        <ion-list v-else-if="currentList">
-          <ion-item v-for="(todo, index) in currentList.items" :key="index">
-            <ion-label>{{ todo }}</ion-label>
-            <ion-checkbox slot="start" @update:modelValue="completeTodo(index)"></ion-checkbox>
-          </ion-item>
-          <ion-item v-if="currentList.items.length === 0">
-              <ion-label class="ion-text-center" color="medium">No todos in this list. Add one!</ion-label>
-          </ion-item>
+        <ion-list v-else-if="currentList" lines="full" class="todo-list">
+          <ion-item-sliding v-for="(todo, index) in currentList.items" :key="index">
+            <ion-item>
+              <ion-checkbox slot="start" @update:modelValue="completeTodo(index)" mode="ios"></ion-checkbox>
+              <ion-label>{{ todo }}</ion-label>
+            </ion-item>
+            <ion-item-options side="end">
+              <ion-item-option color="danger" @click="completeTodo(index)">
+                <ion-icon :icon="trashOutline"></ion-icon>
+              </ion-item-option>
+            </ion-item-options>
+          </ion-item-sliding>
+          
+          <div v-if="currentList.items.length === 0" class="ion-padding ion-text-center empty-state">
+              <ion-icon :icon="checkmarkDoneCircleOutline" size="large" color="success"></ion-icon>
+              <ion-text color="medium">
+                <p>All caught up!</p>
+              </ion-text>
+          </div>
         </ion-list>
 
         <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0">
-          <ion-fab-button @click="presentAlert">
+          <ion-fab-button @click="presentAlert" class="gradient-fab">
             <ion-icon :icon="add"></ion-icon>
           </ion-fab-button>
         </ion-fab>
@@ -86,8 +106,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, alertController, onIonViewWillEnter } from '@ionic/vue';
-import { settingsOutline, add } from 'ionicons/icons';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter } from '@ionic/vue';
+import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline } from 'ionicons/icons';
 import { ref, computed } from 'vue';
 import { todoService, dropboxService } from '../services';
 
