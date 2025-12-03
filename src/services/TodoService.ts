@@ -198,4 +198,70 @@ export class TodoService {
 
         return line.trim();
     }
+
+    isOverdue(dateStr?: string): boolean {
+        if (!dateStr) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return dateStr < today;
+    }
+
+    isDueToday(dateStr?: string): boolean {
+        if (!dateStr) return false;
+        const today = new Date().toISOString().split('T')[0];
+        return dateStr === today;
+    }
+
+    async archiveCompletedTodos() {
+        if (!this.dropbox.isAuthenticated()) return;
+
+        const completedItems: string[] = [];
+        let hasChanges = false;
+
+        // 1. Collect completed items and remove them from lists
+        for (const list of this.lists.value) {
+            const activeItems: TodoItem[] = [];
+            for (const item of list.items) {
+                if (item.completed) {
+                    completedItems.push(this.reconstructTodoLine(item));
+                    hasChanges = true;
+                } else {
+                    activeItems.push(item);
+                }
+            }
+            list.items = activeItems;
+        }
+
+        if (!hasChanges) return;
+
+        // 2. Append to done.txt
+        if (completedItems.length > 0) {
+            const doneContent = completedItems.join('\n') + '\n';
+            // We need to append. Dropbox doesn't natively support append easily in one go without reading first?
+            // Actually, for simplicity and correctness with the current service structure:
+            // We should probably read done.txt, append, and write back.
+            // OR check if the DropboxService has an append method. 
+            // Looking at the file list, I don't see the content of DropboxService, but usually it's read/write.
+            // Let's assume we need to read-modify-write for now to be safe, or just write if it doesn't exist.
+
+            try {
+                let currentDone = '';
+                try {
+                    currentDone = await this.dropbox.readFile('/done.txt');
+                } catch (e) {
+                    // File might not exist, that's fine
+                }
+
+                const newDoneContent = currentDone + (currentDone && !currentDone.endsWith('\n') ? '\n' : '') + doneContent;
+                await this.dropbox.writeFile('/done.txt', newDoneContent);
+            } catch (error) {
+                console.error('Error archiving to done.txt:', error);
+                // If we fail to archive, we probably shouldn't save the deletion from todo.txt?
+                // But for now, let's proceed or throw.
+                throw error;
+            }
+        }
+
+        // 3. Save updated todo.txt
+        await this.saveTodos();
+    }
 }

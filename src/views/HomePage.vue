@@ -13,17 +13,28 @@
       </ion-header>
       <ion-content>
         <ion-list lines="none">
-          <ion-menu-toggle :auto-hide="false" v-for="(list, index) in lists" :key="index">
-            <ion-item button @click="selectedListIndex = index" :color="selectedListIndex === index ? 'secondary' : ''" :detail="false" class="list-item">
-              <ion-icon slot="start" :icon="listOutline"></ion-icon>
-              <ion-label>{{ list.name }}</ion-label>
-              <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">{{ list.items.length }}</ion-badge>
-            </ion-item>
-          </ion-menu-toggle>
-           <ion-item v-if="lists.length === 0">
-            <ion-label color="medium" class="ion-text-center">No lists</ion-label>
-          </ion-item>
-        </ion-list>
+           <ion-menu-toggle :auto-hide="false">
+             <ion-item button @click="selectFocusMode" :color="isFocusMode ? 'secondary' : ''" :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="flashOutline"></ion-icon>
+               <ion-label>Focus</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
+           
+           <ion-item-divider>
+             <ion-label>Lists</ion-label>
+           </ion-item-divider>
+
+           <ion-menu-toggle :auto-hide="false" v-for="(list, index) in lists" :key="index">
+             <ion-item button @click="selectList(index)" :color="!isFocusMode && selectedListIndex === index ? 'secondary' : ''" :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="listOutline"></ion-icon>
+               <ion-label>{{ list.name }}</ion-label>
+               <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">{{ list.items.length }}</ion-badge>
+             </ion-item>
+           </ion-menu-toggle>
+            <ion-item v-if="lists.length === 0">
+             <ion-label color="medium" class="ion-text-center">No lists</ion-label>
+           </ion-item>
+         </ion-list>
       </ion-content>
     </ion-menu>
 
@@ -33,10 +44,13 @@
           <ion-buttons slot="start">
             <ion-menu-button color="light"></ion-menu-button>
           </ion-buttons>
-          <ion-title>{{ currentList ? currentList.name : 'My Todos' }}</ion-title>
+          <ion-title>{{ pageTitle }}</ion-title>
           <ion-buttons slot="end">
             <ion-button @click="showCompleted = !showCompleted">
                 <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
+            </ion-button>
+            <ion-button @click="presentArchiveAlert" color="light" v-if="isAuthenticated">
+                <ion-icon :icon="archiveOutline"></ion-icon>
             </ion-button>
             <ion-button router-link="/settings" color="light">
               <ion-icon :icon="settingsOutline"></ion-icon>
@@ -48,7 +62,7 @@
       <ion-content :fullscreen="true" class="ion-padding-top">
         <ion-header collapse="condense">
           <ion-toolbar>
-            <ion-title size="large">{{ currentList ? currentList.name : 'My Todos' }}</ion-title>
+            <ion-title size="large">{{ pageTitle }}</ion-title>
           </ion-toolbar>
         </ion-header>
 
@@ -77,11 +91,11 @@
           <ion-button @click="presentAddListAlert" color="tertiary">Create List</ion-button>
         </div>
 
-        <ion-list v-else-if="currentList" lines="full" class="todo-list">
-          <ion-reorder-group :disabled="false" @ionItemReorder="handleReorder($event)">
+        <ion-list v-else-if="currentList || isFocusMode" lines="full" class="todo-list">
+          <ion-reorder-group :disabled="isFocusMode || !showCompleted" @ionItemReorder="handleReorder($event)">
             <ion-item-sliding v-for="(todo, index) in filteredItems" :key="todo.raw">
                 <ion-item>
-                <ion-checkbox slot="start" :checked="todo.completed" @ionChange="toggleTodoItem(index)" mode="ios"></ion-checkbox>
+                <ion-checkbox slot="start" :checked="todo.completed" @ionChange="toggleTodoItem(todo, index)" mode="ios"></ion-checkbox>
                 <ion-label :class="{ 'completed-item': todo.completed }">
                     <h2>
                         <ion-badge v-if="todo.priority" :color="getPriorityColor(todo.priority)" class="priority-badge">{{ todo.priority }}</ion-badge>
@@ -89,32 +103,35 @@
                     </h2>
                     <p v-if="todo.dueDate" class="due-date">
                         <ion-icon :icon="calendarOutline" size="small"></ion-icon> {{ todo.dueDate }}
+                        <ion-text color="danger" v-if="todoService.isOverdue(todo.dueDate)" class="ion-margin-start">(Overdue)</ion-text>
+                        <ion-text color="warning" v-if="todoService.isDueToday(todo.dueDate)" class="ion-margin-start">(Today)</ion-text>
                     </p>
                 </ion-label>
                 <ion-reorder slot="end"></ion-reorder>
                 </ion-item>
                 <ion-item-options side="start">
-                <ion-item-option color="success" @click="toggleTodoItem(index)">
+                <ion-item-option color="success" @click="toggleTodoItem(todo, index)">
                     <ion-icon :icon="checkmarkDoneCircleOutline"></ion-icon>
                 </ion-item-option>
                 </ion-item-options>
                 <ion-item-options side="end">
-                <ion-item-option color="danger" @click="deleteTodoItem(index)">
+                <ion-item-option color="danger" @click="deleteTodoItem(todo, index)">
                     <ion-icon :icon="trashOutline"></ion-icon>
                 </ion-item-option>
                 </ion-item-options>
             </ion-item-sliding>
           </ion-reorder-group>
           
-          <div v-if="currentList.items.length === 0" class="ion-padding ion-text-center empty-state">
+          <div v-if="filteredItems.length === 0" class="ion-padding ion-text-center empty-state">
               <ion-icon :icon="checkmarkDoneCircleOutline" size="large" color="success"></ion-icon>
               <ion-text color="medium">
-                <p>All caught up!</p>
+                <p v-if="isFocusMode">No urgent tasks!</p>
+                <p v-else>All caught up!</p>
               </ion-text>
           </div>
         </ion-list>
 
-        <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0">
+        <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0 && !isFocusMode">
           <ion-fab-button @click="presentAlert" class="gradient-fab">
             <ion-icon :icon="add"></ion-icon>
           </ion-fab-button>
@@ -125,24 +142,69 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController } from '@ionic/vue';
-import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider } from '@ionic/vue';
+import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline } from 'ionicons/icons';
 import { ref, computed } from 'vue';
 import { todoService, dropboxService } from '../services';
+import { TodoItem } from '../services/TodoService';
 import AddTodoModal from '../components/AddTodoModal.vue';
 
 const lists = todoService.lists;
 const selectedListIndex = ref(0);
+const isFocusMode = ref(false);
 const isAuthenticated = ref(false);
 const showCompleted = ref(true);
 
-const currentList = computed(() => lists.value[selectedListIndex.value]);
+const currentList = computed(() => {
+    if (isFocusMode.value) return null;
+    return lists.value[selectedListIndex.value];
+});
+
+const pageTitle = computed(() => {
+    if (isFocusMode.value) return 'Focus';
+    return currentList.value ? currentList.value.name : 'My Todos';
+});
 
 const filteredItems = computed(() => {
-    if (!currentList.value) return [];
-    if (showCompleted.value) return currentList.value.items;
-    return currentList.value.items.filter(item => !item.completed);
+    let items: TodoItem[] = [];
+    
+    if (isFocusMode.value) {
+        // Aggregate items from all lists
+        for (const list of lists.value) {
+            items = items.concat(list.items);
+        }
+        
+        // Filter for Focus: Overdue, Today, or Priority A
+        items = items.filter(item => {
+            if (item.completed && !showCompleted.value) return false;
+            // If completed, maybe we don't show in Focus unless it was just completed?
+            // Usually Focus is for active tasks. Let's hide completed in Focus by default unless showCompleted is true.
+            
+            const isOverdue = todoService.isOverdue(item.dueDate);
+            const isDueToday = todoService.isDueToday(item.dueDate);
+            const isHighPriority = item.priority === 'A';
+            
+            return isOverdue || isDueToday || isHighPriority;
+        });
+    } else {
+        if (!currentList.value) return [];
+        items = currentList.value.items;
+    }
+
+    if (!showCompleted.value) {
+        return items.filter(item => !item.completed);
+    }
+    return items;
 });
+
+const selectList = (index: number) => {
+    selectedListIndex.value = index;
+    isFocusMode.value = false;
+};
+
+const selectFocusMode = () => {
+    isFocusMode.value = true;
+};
 
 const checkAuth = () => {
   isAuthenticated.value = dropboxService.isAuthenticated();
@@ -160,12 +222,36 @@ const handleRefresh = async (event: any) => {
   event.target.complete();
 };
 
-const toggleTodoItem = async (index: number) => {
-  await todoService.toggleTodo(selectedListIndex.value, index);
+const toggleTodoItem = async (todo: TodoItem, index: number) => {
+    // If in focus mode, we need to find the real list and index
+    if (isFocusMode.value) {
+        // Find the list containing this todo
+        for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
+            const list = lists.value[lIndex];
+            const tIndex = list.items.indexOf(todo);
+            if (tIndex !== -1) {
+                await todoService.toggleTodo(lIndex, tIndex);
+                break;
+            }
+        }
+    } else {
+        await todoService.toggleTodo(selectedListIndex.value, index);
+    }
 };
 
-const deleteTodoItem = async (index: number) => {
-    await todoService.removeTodo(selectedListIndex.value, index);
+const deleteTodoItem = async (todo: TodoItem, index: number) => {
+    if (isFocusMode.value) {
+        for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
+            const list = lists.value[lIndex];
+            const tIndex = list.items.indexOf(todo);
+            if (tIndex !== -1) {
+                await todoService.removeTodo(lIndex, tIndex);
+                break;
+            }
+        }
+    } else {
+        await todoService.removeTodo(selectedListIndex.value, index);
+    }
 };
 
 const getPriorityColor = (priority: string) => {
@@ -182,6 +268,11 @@ const handleReorder = async (event: CustomEvent) => {
   // The `from` and `to` properties contain the index of the item
   // when the drag started and ended, respectively
   const { from, to } = event.detail;
+  
+  if (!currentList.value) {
+      event.detail.complete();
+      return;
+  }
   
   // Finish the reorder and position the item in the DOM based on
   // where the gesture ended. This method can also be called directly
@@ -277,6 +368,26 @@ const presentAlert = async () => {
   });
 
   await modal.present();
+};
+
+const presentArchiveAlert = async () => {
+    const alert = await alertController.create({
+        header: 'Archive Completed?',
+        message: 'This will move all completed todos to done.txt. This action cannot be undone from the app.',
+        buttons: [
+            {
+                text: 'Cancel',
+                role: 'cancel'
+            },
+            {
+                text: 'Archive',
+                handler: async () => {
+                    await todoService.archiveCompletedTodos();
+                }
+            }
+        ]
+    });
+    await alert.present();
 };
 </script>
 
