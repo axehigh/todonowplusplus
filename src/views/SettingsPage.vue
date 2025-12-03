@@ -15,6 +15,10 @@
           <ion-label position="stacked">Dropbox App Key</ion-label>
           <ion-input v-model="clientId" placeholder="Enter your App Key"></ion-input>
         </ion-item>
+        <ion-item>
+            <ion-label>Dark Mode</ion-label>
+            <ion-toggle slot="end" :checked="isDark" @ionChange="toggleDarkMode"></ion-toggle>
+        </ion-item>
       </ion-list>
 
       <div class="ion-padding">
@@ -34,19 +38,39 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonToggle } from '@ionic/vue';
 import { ref, onMounted } from 'vue';
 import { dropboxService } from '../services';
 
 const clientId = ref('');
 const isAuthenticated = ref(false);
 const redirectUri = window.location.origin + '/auth';
+const isDark = ref(false);
 
 onMounted(() => {
   const storedId = localStorage.getItem('dropbox_client_id');
   if (storedId) clientId.value = storedId;
   isAuthenticated.value = dropboxService.isAuthenticated();
+
+  // Check dark mode
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const storedTheme = localStorage.getItem('theme');
+  if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
+      isDark.value = true;
+      document.body.classList.add('dark');
+  }
 });
+
+const toggleDarkMode = (event: any) => {
+    isDark.value = event.detail.checked;
+    if (isDark.value) {
+        document.body.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.body.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    }
+};
 
 const connect = async () => {
   if (!clientId.value) return;

@@ -32,11 +32,12 @@ http://ionicframework.com/docs/theming/ */
 }
 
 /* Dark Mode */
+/* Dark Mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --ion-background-color: #121212;
     --ion-item-background: #1e1e1e;
-    
+
     --ion-color-primary: #b388ff;
     --ion-color-primary-rgb: 179, 136, 255;
     --ion-color-primary-contrast: #000000;
@@ -53,16 +54,36 @@ http://ionicframework.com/docs/theming/ */
   }
 }
 
+/* Manual Dark Mode Toggle */
+body.dark {
+  --ion-background-color: #121212;
+  --ion-item-background: #1e1e1e;
+
+  --ion-color-primary: #b388ff;
+  --ion-color-primary-rgb: 179, 136, 255;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+  --ion-color-primary-shade: #9e78e0;
+  --ion-color-primary-tint: #bb94ff;
+
+  --ion-color-secondary: #ff80ab;
+  --ion-color-secondary-rgb: 255, 128, 171;
+  --ion-color-secondary-contrast: #000000;
+  --ion-color-secondary-contrast-rgb: 0, 0, 0;
+  --ion-color-secondary-shade: #e07196;
+  --ion-color-secondary-tint: #ff8db3;
+}
+
 .gradient-toolbar {
-    --background: linear-gradient(90deg, var(--ion-color-primary) 0%, var(--ion-color-secondary) 100%);
-    --color: white;
+  --background: linear-gradient(90deg, var(--ion-color-primary) 0%, var(--ion-color-secondary) 100%);
+  --color: white;
 }
 
 .gradient-fab {
-    --background: linear-gradient(135deg, var(--ion-color-secondary) 0%, var(--ion-color-tertiary) 100%);
+  --background: linear-gradient(135deg, var(--ion-color-secondary) 0%, var(--ion-color-tertiary) 100%);
 }
 
 ion-checkbox {
-    --checkbox-background-checked: var(--ion-color-secondary);
-    --border-color-checked: var(--ion-color-secondary);
+  --checkbox-background-checked: var(--ion-color-secondary);
+  --border-color-checked: var(--ion-color-secondary);
 }
