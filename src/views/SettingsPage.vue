@@ -30,7 +30,7 @@
         <p>
           You need to create a Dropbox App to get an App Key.
           <br>
-          Redirect URI: <code>{{ redirectUri }}</code>
+          Redirect URI: <code>{{ computedRedirectUri }}</code>
         </p>
       </ion-text>
     </ion-content>
@@ -39,26 +39,67 @@
 
 <script setup lang="ts">
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonToggle } from '@ionic/vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { dropboxService } from '../services';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+import type { PluginListenerHandle } from '@capacitor/core';
 
 const clientId = ref('');
 const isAuthenticated = ref(false);
-const redirectUri = window.location.origin + '/auth';
 const isDark = ref(false);
+
+// Compute redirect based on platform and current App Key
+const computedRedirectUri = computed(() => {
+  // Native must use db-<APP_KEY>://oauth2redirect
+  if (Capacitor.isNativePlatform()) {
+    const id = clientId.value?.trim();
+    return id ? `db-${id}://oauth2redirect` : 'db-<app_key>://oauth2redirect';
+  }
+  // Web fallback
+  return window.location.origin + '/auth';
+});
+
+let urlOpenHandle: PluginListenerHandle | null = null;
 
 onMounted(() => {
   const storedId = localStorage.getItem('dropbox_client_id');
   if (storedId) clientId.value = storedId;
   isAuthenticated.value = dropboxService.isAuthenticated();
 
-  // Check dark mode
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const storedTheme = localStorage.getItem('theme');
   if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
       isDark.value = true;
       document.body.classList.add('dark');
   }
+
+  // Handle OAuth redirect on native: db-<APP_KEY>://oauth2redirect#access_token=...
+  if (Capacitor.isNativePlatform()) {
+    App.addListener('appUrlOpen', async (data) => {
+      try {
+        const url = data?.url || '';
+        // Ensure the URL starts with our scheme
+        const expectedPrefix = `db-${clientId.value}://oauth2redirect`;
+        if (!url.toLowerCase().startsWith(expectedPrefix.toLowerCase())) {
+          return;
+        }
+        // Let the service parse and persist the token
+        const ok = dropboxService.handleAuthCallbackFromUrl(url);
+        if (ok) {
+          await Browser.close();
+          isAuthenticated.value = true;
+        }
+      } catch (e) {
+        // noop: you may log if desired
+      }
+    }).then(handle => { urlOpenHandle = handle; });
+  }
+});
+
+onBeforeUnmount(() => {
+  urlOpenHandle?.remove?.();
 });
 
 const toggleDarkMode = (event: any) => {
@@ -75,29 +116,15 @@ const toggleDarkMode = (event: any) => {
 const connect = async () => {
   if (!clientId.value) return;
   localStorage.setItem('dropbox_client_id', clientId.value);
-  
-  // Re-initialize service with new ID
-  // We need a way to update the client ID in the service.
-  // Since we didn't implement a setter, we'll just create a new instance or reload.
-  // But wait, the service instance is exported.
-  // Let's just update the localStorage and reload the page or handle it in AuthPage.
-  // Actually, getAuthenticationUrl uses the internal auth object which was initialized with the constructor ID.
-  // We need to update the service.
-  
-  // Hack: We'll just redirect to the auth URL constructed manually or update the service if we can.
-  // Better: Add setClientId to DropboxService.
-  
-  // For now, let's assume the user enters the ID, we save it, and then we use it.
-  // But the service was already instantiated with empty string.
-  // We should probably reload the app to pick up the new ID if we rely on constructor.
-  // OR, we modify DropboxService to allow setting ID.
-  
-  // Let's modify DropboxService to be safe.
-  // But I can't modify it right now without another tool call.
-  // I'll try to use a workaround: construct the URL manually here since it's simple.
-  
-  const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${clientId.value}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
-  window.location.href = authUrl;
+
+  const redirectUri = computedRedirectUri.value;
+  const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(clientId.value)}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+  if (Capacitor.isNativePlatform()) {
+    await Browser.open({ url: authUrl });
+  } else {
+    window.location.href = authUrl;
+  }
 };
 
 const logout = () => {
