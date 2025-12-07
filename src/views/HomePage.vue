@@ -95,6 +95,19 @@
         </div>
 
         <ion-list v-else-if="currentList || isFocusMode" lines="full" class="todo-list">
+          <!-- Inline Quick Add Input moved to the top of the list -->
+          <ion-item v-if="!isFocusMode" class="quick-add-item">
+            <ion-input
+              v-model="quickAddText"
+              placeholder="Add a task..."
+              @keyup.enter="quickAddTodo"
+              :clear-input="true"
+            ></ion-input>
+            <ion-button slot="end" fill="clear" @click="quickAddTodo" :disabled="!quickAddText">
+              <ion-icon :icon="addCircleOutline"></ion-icon>
+            </ion-button>
+          </ion-item>
+
           <ion-reorder-group :disabled="isFocusMode || !showCompleted" @ionItemReorder="handleReorder($event)">
             <ion-item-sliding v-for="(todo, index) in filteredItems" :key="todo.raw">
                 <ion-item>
@@ -139,18 +152,6 @@
               </ion-text>
           </div>
 
-          <!-- Inline Quick Add Input -->
-          <ion-item v-if="!isFocusMode" class="quick-add-item">
-            <ion-input
-              v-model="quickAddText"
-              placeholder="Add a task..."
-              @keyup.enter="quickAddTodo"
-              :clear-input="true"
-            ></ion-input>
-            <ion-button slot="end" fill="clear" @click="quickAddTodo" :disabled="!quickAddText">
-              <ion-icon :icon="addCircleOutline"></ion-icon>
-            </ion-button>
-          </ion-item>
         </ion-list>
 
         <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0 && !isFocusMode">
@@ -484,94 +485,26 @@ const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
         }
     }
 
-    const alert = await alertController.create({
-        header: 'Edit Task',
-        inputs: [
-            {
-                name: 'text',
-                type: 'text',
-                placeholder: 'Task description',
-                value: todo.text
-            },
-            {
-                name: 'priority',
-                type: 'text',
-                placeholder: 'Priority (A, B, C, D or empty)',
-                value: todo.priority || ''
-            },
-            {
-                name: 'dueDate',
-                type: 'date',
-                placeholder: 'Due Date',
-                value: todo.dueDate || ''
-            },
-            {
-                name: 'category',
-                type: 'text',
-                placeholder: 'Category (Reminder, Do, Long Task)',
-                value: todo.category || ''
-            },
-            {
-                name: 'timeSpent',
-                type: 'number',
-                placeholder: 'Time spent (minutes)',
-                value: todo.timeSpent?.toString() || '',
-                min: 0
-            }
-        ],
-        buttons: [
-            {
-                text: 'Cancel',
-                role: 'cancel'
-            },
-            {
-                text: 'Add Time',
-                handler: (data) => {
-                    if (data.timeSpent && todo.category === 'Long Task') {
-                        const additionalMinutes = parseInt(data.timeSpent, 10);
-                        if (additionalMinutes > 0) {
-                            todoService.updateTimeSpent(listIdx, todoIdx, additionalMinutes);
-                        }
-                    }
-                    return false; // Keep dialog open
-                }
-            },
-            {
-                text: 'Save',
-                handler: async (data) => {
-                    const updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>> = {};
-
-                    if (data.text && data.text !== todo.text) {
-                        updates.text = data.text;
-                    }
-
-                    const newPriority = data.priority?.toUpperCase();
-                    if (newPriority !== (todo.priority || '')) {
-                        updates.priority = ['A', 'B', 'C', 'D'].includes(newPriority) ? newPriority : '';
-                    }
-
-                    if (data.dueDate !== (todo.dueDate || '')) {
-                        updates.dueDate = data.dueDate || '';
-                    }
-
-                    const validCategories = ['Reminder', 'Do', 'Long Task', ''];
-                    if (data.category !== (todo.category || '')) {
-                        updates.category = validCategories.includes(data.category) ? data.category : '';
-                    }
-
-                    if (data.timeSpent !== (todo.timeSpent?.toString() || '')) {
-                        const newTime = parseInt(data.timeSpent, 10);
-                        updates.timeSpent = isNaN(newTime) ? 0 : newTime;
-                    }
-
-                    if (Object.keys(updates).length > 0) {
-                        await todoService.updateTodo(listIdx, todoIdx, updates);
-                    }
-                }
-            }
-        ]
+    const modal = await modalController.create({
+      component: AddTodoModal,
+      componentProps: {
+        mode: 'edit',
+        initialText: todo.text,
+        initialPriority: todo.priority || '',
+        initialCategory: todo.category || '',
+        initialDueDate: todo.dueDate || '',
+        initialTimeSpent: typeof todo.timeSpent === 'number' ? todo.timeSpent : undefined,
+      }
     });
-    await alert.present();
+
+    modal.onWillDismiss().then(async (ev) => {
+      if (ev.role === 'confirm' && ev.data) {
+        const updates = ev.data as Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>>;
+        await todoService.updateTodo(listIdx, todoIdx, updates);
+      }
+    });
+
+    await modal.present();
 };
 </script>
 

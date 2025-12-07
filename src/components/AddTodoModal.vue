@@ -1,7 +1,7 @@
 <template>
   <ion-header>
     <ion-toolbar>
-      <ion-title>New Todo</ion-title>
+      <ion-title>{{ isEdit ? 'Edit Todo' : 'New Todo' }}</ion-title>
       <ion-buttons slot="end">
         <ion-button @click="cancel">Cancel</ion-button>
       </ion-buttons>
@@ -52,8 +52,14 @@
       </ion-content>
     </ion-modal>
 
+    <!-- Time Spent (only shown when editing) -->
+    <ion-item v-if="isEdit">
+      <ion-label position="stacked">Time Spent (minutes)</ion-label>
+      <ion-input type="number" inputmode="numeric" v-model.number="timeSpentLocal" min="0" placeholder="e.g. 30"></ion-input>
+    </ion-item>
+
     <div class="ion-padding-top">
-      <ion-button expand="block" @click="save" :disabled="!text">Add Task</ion-button>
+      <ion-button expand="block" @click="save" :disabled="!text">{{ isEdit ? 'Save' : 'Add Task' }}</ion-button>
     </div>
   </ion-content>
 </template>
@@ -61,41 +67,77 @@
 <script setup lang="ts">
 import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonSelect, IonSelectOption, IonModal, IonDatetime, IonText, IonIcon, modalController } from '@ionic/vue';
 import { calendarOutline } from 'ionicons/icons';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
-const text = ref('');
-const priority = ref('');
-const category = ref('');
-const dueDate = ref('');
+type Mode = 'add' | 'edit';
+
+const props = defineProps<{
+  mode?: Mode;
+  initialText?: string;
+  initialPriority?: string;
+  initialCategory?: string;
+  initialDueDate?: string; // YYYY-MM-DD
+  initialTimeSpent?: number; // minutes
+}>();
+
+const isEdit = computed(() => (props.mode || 'add') === 'edit');
+
+const text = ref(props.initialText || '');
+const priority = ref(props.initialPriority || '');
+const category = ref(props.initialCategory || '');
+const dueDate = ref(props.initialDueDate || '');
+const timeSpentLocal = ref<number | undefined>(props.initialTimeSpent);
 
 const cancel = () => {
   modalController.dismiss(null, 'cancel');
 };
 
 const save = () => {
-  // Construct the todo string
-  let todoString = '';
+  if (!isEdit.value) {
+    // Construct the todo string for adding
+    let todoString = '';
 
-  if (priority.value) {
+    if (priority.value) {
       todoString += `(${priority.value}) `;
-  }
+    }
 
-  todoString += text.value;
+    todoString += text.value;
 
-  if (dueDate.value) {
+    if (dueDate.value) {
       // IonDatetime returns ISO string (YYYY-MM-DDTHH:mm:ss...), we just need YYYY-MM-DD
       const datePart = dueDate.value.split('T')[0];
       todoString += ` due:${datePart}`;
-  }
+    }
 
-  if (category.value) {
+    if (category.value) {
       todoString += ` cat:${category.value}`;
-  }
+    }
 
-  modalController.dismiss(todoString, 'confirm');
+    modalController.dismiss(todoString, 'confirm');
+  } else {
+    // Return structured updates for editing
+    const updates: any = {
+      text: text.value,
+      priority: priority.value || '',
+      category: category.value || '',
+    };
+
+    if (dueDate.value) {
+      const datePart = dueDate.value.includes('T') ? dueDate.value.split('T')[0] : dueDate.value;
+      updates.dueDate = datePart;
+    } else {
+      updates.dueDate = '';
+    }
+
+    if (typeof timeSpentLocal.value === 'number' && timeSpentLocal.value >= 0) {
+      updates.timeSpent = timeSpentLocal.value;
+    }
+
+    modalController.dismiss(updates, 'confirm');
+  }
 };
 
-const onDateChange = (ev: any) => {
+const onDateChange = () => {
     // Optional: handle date change if needed, but v-model handles it
 };
 </script>
