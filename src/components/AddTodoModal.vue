@@ -25,6 +25,16 @@
       </ion-select>
     </ion-item>
 
+    <ion-item>
+      <ion-label>Category</ion-label>
+      <ion-select v-model="category" interface="popover">
+        <ion-select-option value="">None</ion-select-option>
+        <ion-select-option value="Reminder">Reminder</ion-select-option>
+        <ion-select-option value="Do">Do</ion-select-option>
+        <ion-select-option value="Long Task">Long Task</ion-select-option>
+      </ion-select>
+    </ion-item>
+
     <ion-item id="open-date-modal">
       <ion-label>Due Date</ion-label>
       <ion-text slot="end">{{ dueDate || 'None' }}</ion-text>
@@ -55,6 +65,7 @@ import { ref } from 'vue';
 
 const text = ref('');
 const priority = ref('');
+const category = ref('');
 const dueDate = ref('');
 
 const cancel = () => {
@@ -64,19 +75,23 @@ const cancel = () => {
 const save = () => {
   // Construct the todo string
   let todoString = '';
-  
+
   if (priority.value) {
       todoString += `(${priority.value}) `;
   }
-  
+
   todoString += text.value;
-  
+
   if (dueDate.value) {
       // IonDatetime returns ISO string (YYYY-MM-DDTHH:mm:ss...), we just need YYYY-MM-DD
       const datePart = dueDate.value.split('T')[0];
       todoString += ` due:${datePart}`;
   }
-  
+
+  if (category.value) {
+      todoString += ` cat:${category.value}`;
+  }
+
   modalController.dismiss(todoString, 'confirm');
 };
 

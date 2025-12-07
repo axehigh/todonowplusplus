@@ -19,7 +19,7 @@
                <ion-label>Focus</ion-label>
              </ion-item>
            </ion-menu-toggle>
-           
+
            <ion-item-divider>
              <ion-label>Lists</ion-label>
            </ion-item-divider>
@@ -48,6 +48,9 @@
           <ion-buttons slot="end">
             <ion-button @click="showCompleted = !showCompleted">
                 <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
+            </ion-button>
+            <ion-button @click="presentRenameListAlert" color="light" v-if="isAuthenticated && !isFocusMode && currentList">
+                <ion-icon :icon="createOutline"></ion-icon>
             </ion-button>
             <ion-button @click="presentArchiveAlert" color="light" v-if="isAuthenticated">
                 <ion-icon :icon="archiveOutline"></ion-icon>
@@ -96,15 +99,21 @@
             <ion-item-sliding v-for="(todo, index) in filteredItems" :key="todo.raw">
                 <ion-item>
                 <ion-checkbox slot="start" :checked="todo.completed" @ionChange="toggleTodoItem(todo, index)" mode="ios"></ion-checkbox>
-                <ion-label :class="{ 'completed-item': todo.completed }">
+                <ion-label :class="{ 'completed-item': todo.completed }" @click="presentEditTodoAlert(todo, index)">
                     <h2>
                         <ion-badge v-if="todo.priority" :color="getPriorityColor(todo.priority)" class="priority-badge">{{ todo.priority }}</ion-badge>
+                        <ion-badge v-if="todo.category" :color="getCategoryColor(todo.category)" class="category-badge">{{ todo.category }}</ion-badge>
                         {{ todo.text }}
                     </h2>
-                    <p v-if="todo.dueDate" class="due-date">
-                        <ion-icon :icon="calendarOutline" size="small"></ion-icon> {{ todo.dueDate }}
-                        <ion-text color="danger" v-if="todoService.isOverdue(todo.dueDate)" class="ion-margin-start">(Overdue)</ion-text>
-                        <ion-text color="warning" v-if="todoService.isDueToday(todo.dueDate)" class="ion-margin-start">(Today)</ion-text>
+                    <p v-if="todo.dueDate || (todo.category === 'Long Task' && todo.timeSpent)" class="due-date">
+                        <span v-if="todo.dueDate">
+                          <ion-icon :icon="calendarOutline" size="small"></ion-icon> {{ todo.dueDate }}
+                          <ion-text color="danger" v-if="todoService.isOverdue(todo.dueDate)" class="ion-margin-start">(Overdue)</ion-text>
+                          <ion-text color="warning" v-if="todoService.isDueToday(todo.dueDate)" class="ion-margin-start">(Today)</ion-text>
+                        </span>
+                        <span v-if="todo.category === 'Long Task' && todo.timeSpent" class="time-spent">
+                          <ion-icon :icon="timeOutline" size="small"></ion-icon> {{ formatTimeSpent(todo.timeSpent) }}
+                        </span>
                     </p>
                 </ion-label>
                 <ion-reorder slot="end"></ion-reorder>
@@ -121,7 +130,7 @@
                 </ion-item-options>
             </ion-item-sliding>
           </ion-reorder-group>
-          
+
           <div v-if="filteredItems.length === 0" class="ion-padding ion-text-center empty-state">
               <ion-icon :icon="checkmarkDoneCircleOutline" size="large" color="success"></ion-icon>
               <ion-text color="medium">
@@ -129,6 +138,19 @@
                 <p v-else>All caught up!</p>
               </ion-text>
           </div>
+
+          <!-- Inline Quick Add Input -->
+          <ion-item v-if="!isFocusMode" class="quick-add-item">
+            <ion-input
+              v-model="quickAddText"
+              placeholder="Add a task..."
+              @keyup.enter="quickAddTodo"
+              :clear-input="true"
+            ></ion-input>
+            <ion-button slot="end" fill="clear" @click="quickAddTodo" :disabled="!quickAddText">
+              <ion-icon :icon="addCircleOutline"></ion-icon>
+            </ion-button>
+          </ion-item>
         </ion-list>
 
         <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0 && !isFocusMode">
@@ -142,8 +164,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider } from '@ionic/vue';
-import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline } from 'ionicons/icons';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput } from '@ionic/vue';
+import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline, timeOutline, createOutline } from 'ionicons/icons';
 import { ref, computed } from 'vue';
 import { todoService, dropboxService } from '../services';
 import { TodoItem } from '../services/TodoService';
@@ -154,6 +176,7 @@ const selectedListIndex = ref(0);
 const isFocusMode = ref(false);
 const isAuthenticated = ref(false);
 const showCompleted = ref(true);
+const quickAddText = ref('');
 
 const currentList = computed(() => {
     if (isFocusMode.value) return null;
@@ -167,23 +190,23 @@ const pageTitle = computed(() => {
 
 const filteredItems = computed(() => {
     let items: TodoItem[] = [];
-    
+
     if (isFocusMode.value) {
         // Aggregate items from all lists
         for (const list of lists.value) {
             items = items.concat(list.items);
         }
-        
+
         // Filter for Focus: Overdue, Today, or Priority A
         items = items.filter(item => {
             if (item.completed && !showCompleted.value) return false;
             // If completed, maybe we don't show in Focus unless it was just completed?
             // Usually Focus is for active tasks. Let's hide completed in Focus by default unless showCompleted is true.
-            
+
             const isOverdue = todoService.isOverdue(item.dueDate);
             const isDueToday = todoService.isDueToday(item.dueDate);
             const isHighPriority = item.priority === 'A';
-            
+
             return isOverdue || isDueToday || isHighPriority;
         });
     } else {
@@ -204,6 +227,12 @@ const selectList = (index: number) => {
 
 const selectFocusMode = () => {
     isFocusMode.value = true;
+};
+
+const quickAddTodo = async () => {
+    if (!quickAddText.value.trim()) return;
+    await todoService.addTodo(selectedListIndex.value, quickAddText.value.trim());
+    quickAddText.value = '';
 };
 
 const checkAuth = () => {
@@ -264,16 +293,32 @@ const getPriorityColor = (priority: string) => {
     }
 };
 
+const getCategoryColor = (category: string) => {
+    switch (category) {
+        case 'Reminder': return 'tertiary';
+        case 'Do': return 'primary';
+        case 'Long Task': return 'secondary';
+        default: return 'medium';
+    }
+};
+
+const formatTimeSpent = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
+
 const handleReorder = async (event: CustomEvent) => {
   // The `from` and `to` properties contain the index of the item
   // when the drag started and ended, respectively
   const { from, to } = event.detail;
-  
+
   if (!currentList.value) {
       event.detail.complete();
       return;
   }
-  
+
   // Finish the reorder and position the item in the DOM based on
   // where the gesture ended. This method can also be called directly
   // by the reorder group
@@ -284,36 +329,36 @@ const handleReorder = async (event: CustomEvent) => {
   // For now, let's only allow reordering when showing all items or handle it carefully.
   // Actually, if we reorder in the filtered view, we need to map back to original indices.
   // BUT, IonReorderGroup works on the rendered list.
-  
-  // Simplification: Only allow reordering if NOT filtering? 
+
+  // Simplification: Only allow reordering if NOT filtering?
   // Or just map the indices.
-  
+
   if (!showCompleted.value) {
       // If we are hiding completed items, the indices 'from' and 'to' correspond to the filtered list.
       // We need to find the actual indices in the main list.
       const visibleItems = filteredItems.value;
       const itemMoved = visibleItems[from];
       const targetItem = visibleItems[to];
-      
+
       // Find original indices
       const originalFrom = currentList.value.items.indexOf(itemMoved);
       // For target, it's a bit tricky because we are inserting.
       // Let's just say we move it before the target item.
-      let originalTo = currentList.value.items.indexOf(targetItem);
-      
+      const originalTo = currentList.value.items.indexOf(targetItem);
+
       // If moving down, we might need to adjust
       if (from < to) {
           // If we move from 0 to 1, we want to be after the item at 1.
           // originalTo is the index of the item we dropped ON/Before.
           // Wait, ionic reorder is "insert at".
       }
-      
+
       // To avoid complexity for this iteration, let's just disable reordering when filtered?
       // Or just apply it to the main list using the item references.
-      
+
       // Let's use the simple approach: Update the service with mapped indices.
       // Actually, TodoService.reorderTodos takes indices.
-      
+
       await todoService.reorderTodos(selectedListIndex.value, originalFrom, originalTo);
   } else {
       await todoService.reorderTodos(selectedListIndex.value, from, to);
@@ -344,6 +389,38 @@ const presentAddListAlert = async () => {
             setTimeout(() => {
                 selectedListIndex.value = lists.value.length - 1;
             }, 100);
+          }
+        }
+      }
+    ]
+  });
+
+  await alert.present();
+};
+
+const presentRenameListAlert = async () => {
+  if (!currentList.value) return;
+
+  const alert = await alertController.create({
+    header: 'Rename List',
+    inputs: [
+      {
+        name: 'name',
+        type: 'text',
+        placeholder: 'List Name',
+        value: currentList.value.name
+      }
+    ],
+    buttons: [
+      {
+        text: 'Cancel',
+        role: 'cancel'
+      },
+      {
+        text: 'Rename',
+        handler: async (data) => {
+          if (data.name && data.name !== currentList.value?.name) {
+            await todoService.renameList(selectedListIndex.value, data.name);
           }
         }
       }
@@ -389,6 +466,113 @@ const presentArchiveAlert = async () => {
     });
     await alert.present();
 };
+
+const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
+    // Find actual list index and todo index for focus mode
+    let listIdx = selectedListIndex.value;
+    let todoIdx = index;
+
+    if (isFocusMode.value) {
+        for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
+            const list = lists.value[lIndex];
+            const tIndex = list.items.indexOf(todo);
+            if (tIndex !== -1) {
+                listIdx = lIndex;
+                todoIdx = tIndex;
+                break;
+            }
+        }
+    }
+
+    const alert = await alertController.create({
+        header: 'Edit Task',
+        inputs: [
+            {
+                name: 'text',
+                type: 'text',
+                placeholder: 'Task description',
+                value: todo.text
+            },
+            {
+                name: 'priority',
+                type: 'text',
+                placeholder: 'Priority (A, B, C, D or empty)',
+                value: todo.priority || ''
+            },
+            {
+                name: 'dueDate',
+                type: 'date',
+                placeholder: 'Due Date',
+                value: todo.dueDate || ''
+            },
+            {
+                name: 'category',
+                type: 'text',
+                placeholder: 'Category (Reminder, Do, Long Task)',
+                value: todo.category || ''
+            },
+            {
+                name: 'timeSpent',
+                type: 'number',
+                placeholder: 'Time spent (minutes)',
+                value: todo.timeSpent?.toString() || '',
+                min: 0
+            }
+        ],
+        buttons: [
+            {
+                text: 'Cancel',
+                role: 'cancel'
+            },
+            {
+                text: 'Add Time',
+                handler: (data) => {
+                    if (data.timeSpent && todo.category === 'Long Task') {
+                        const additionalMinutes = parseInt(data.timeSpent, 10);
+                        if (additionalMinutes > 0) {
+                            todoService.updateTimeSpent(listIdx, todoIdx, additionalMinutes);
+                        }
+                    }
+                    return false; // Keep dialog open
+                }
+            },
+            {
+                text: 'Save',
+                handler: async (data) => {
+                    const updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>> = {};
+
+                    if (data.text && data.text !== todo.text) {
+                        updates.text = data.text;
+                    }
+
+                    const newPriority = data.priority?.toUpperCase();
+                    if (newPriority !== (todo.priority || '')) {
+                        updates.priority = ['A', 'B', 'C', 'D'].includes(newPriority) ? newPriority : '';
+                    }
+
+                    if (data.dueDate !== (todo.dueDate || '')) {
+                        updates.dueDate = data.dueDate || '';
+                    }
+
+                    const validCategories = ['Reminder', 'Do', 'Long Task', ''];
+                    if (data.category !== (todo.category || '')) {
+                        updates.category = validCategories.includes(data.category) ? data.category : '';
+                    }
+
+                    if (data.timeSpent !== (todo.timeSpent?.toString() || '')) {
+                        const newTime = parseInt(data.timeSpent, 10);
+                        updates.timeSpent = isNaN(newTime) ? 0 : newTime;
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        await todoService.updateTodo(listIdx, todoIdx, updates);
+                    }
+                }
+            }
+        ]
+    });
+    await alert.present();
+};
 </script>
 
 <style scoped>
@@ -402,6 +586,12 @@ const presentArchiveAlert = async () => {
     vertical-align: middle;
 }
 
+.category-badge {
+    margin-right: 8px;
+    vertical-align: middle;
+    font-size: 0.7em;
+}
+
 .due-date {
     display: flex;
     align-items: center;
@@ -409,5 +599,18 @@ const presentArchiveAlert = async () => {
     font-size: 0.8em;
     color: var(--ion-color-medium);
     margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.time-spent {
+    margin-left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.quick-add-item {
+    --background: var(--ion-color-light);
+    margin-top: 8px;
 }
 </style>

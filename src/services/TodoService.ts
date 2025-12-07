@@ -1,6 +1,8 @@
 import { ref } from 'vue';
 import { DropboxService } from './DropboxService';
 
+export type TaskCategory = 'Reminder' | 'Do' | 'Long Task' | '';
+
 export interface TodoItem {
     raw: string;
     text: string;
@@ -10,6 +12,8 @@ export interface TodoItem {
     dueDate?: string;
     projects: string[];
     contexts: string[];
+    category?: TaskCategory;
+    timeSpent?: number; // Time spent in minutes (for Long Task category)
 }
 
 export interface TodoList {
@@ -90,14 +94,23 @@ export class TodoService {
         const dueMatch = item.text.match(dueRegex);
         if (dueMatch) {
             item.dueDate = dueMatch[1];
-            // We keep metadata in text for now to preserve it on save, 
-            // or we can strip it for display. Let's strip for cleaner display but keep in raw.
             item.text = item.text.replace(dueRegex, '').trim();
-            // Note: Stripping might make editing harder if we don't reconstruct perfectly.
-            // For this version, let's KEEP it in the text for simplicity of editing, 
-            // but UI can choose to hide it.
-            // Actually, let's strip it from 'text' for the UI, but reconstruction needs care.
-            // Let's stick to: 'text' is the display text.
+        }
+
+        // 4. Category (cat:Reminder, cat:Do, cat:Long Task)
+        const catRegex = /\bcat:(Reminder|Do|Long Task)\b/;
+        const catMatch = item.text.match(catRegex);
+        if (catMatch) {
+            item.category = catMatch[1] as TaskCategory;
+            item.text = item.text.replace(catRegex, '').trim();
+        }
+
+        // 5. Time Spent (spent:123) - in minutes, for Long Task category
+        const spentRegex = /\bspent:(\d+)\b/;
+        const spentMatch = item.text.match(spentRegex);
+        if (spentMatch) {
+            item.timeSpent = parseInt(spentMatch[1], 10);
+            item.text = item.text.replace(spentRegex, '').trim();
         }
 
         return item;
@@ -151,6 +164,38 @@ export class TodoService {
         await this.saveTodos();
     }
 
+    async updateTodo(listIndex: number, todoIndex: number, updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>>) {
+        const list = this.lists.value[listIndex];
+        if (!list || !list.items[todoIndex]) return;
+
+        const item = list.items[todoIndex];
+
+        if (updates.text !== undefined) item.text = updates.text;
+        if (updates.priority !== undefined) item.priority = updates.priority || undefined;
+        if (updates.dueDate !== undefined) item.dueDate = updates.dueDate || undefined;
+        if (updates.category !== undefined) item.category = updates.category || undefined;
+        if (updates.timeSpent !== undefined) item.timeSpent = updates.timeSpent;
+
+        await this.saveTodos();
+    }
+
+    async renameList(listIndex: number, newName: string) {
+        if (!newName.trim()) return;
+        if (!this.lists.value[listIndex]) return;
+
+        this.lists.value[listIndex].name = newName.trim();
+        await this.saveTodos();
+    }
+
+    async updateTimeSpent(listIndex: number, todoIndex: number, minutes: number) {
+        const list = this.lists.value[listIndex];
+        if (!list || !list.items[todoIndex]) return;
+
+        const item = list.items[todoIndex];
+        item.timeSpent = (item.timeSpent || 0) + minutes;
+        await this.saveTodos();
+    }
+
     private async saveTodos() {
         if (!this.dropbox.isAuthenticated()) return;
 
@@ -182,8 +227,8 @@ export class TodoService {
             line += `(${item.priority}) `;
         }
 
-        // The 'text' field currently might still contain 'due:...' if we didn't strip it effectively 
-        // or if we want to preserve other tags. 
+        // The 'text' field currently might still contain 'due:...' if we didn't strip it effectively
+        // or if we want to preserve other tags.
         // If we stripped 'due:' from item.text in parse, we must add it back here.
         // In parseTodoLine I decided to strip it. So I must add it back.
 
@@ -194,6 +239,14 @@ export class TodoService {
             if (!item.text.includes(`due:${item.dueDate}`)) {
                 line += ` due:${item.dueDate}`;
             }
+        }
+
+        if (item.category) {
+            line += ` cat:${item.category}`;
+        }
+
+        if (item.timeSpent !== undefined && item.timeSpent > 0) {
+            line += ` spent:${item.timeSpent}`;
         }
 
         return line.trim();
@@ -239,7 +292,7 @@ export class TodoService {
             // We need to append. Dropbox doesn't natively support append easily in one go without reading first?
             // Actually, for simplicity and correctness with the current service structure:
             // We should probably read done.txt, append, and write back.
-            // OR check if the DropboxService has an append method. 
+            // OR check if the DropboxService has an append method.
             // Looking at the file list, I don't see the content of DropboxService, but usually it's read/write.
             // Let's assume we need to read-modify-write for now to be safe, or just write if it doesn't exist.
 
