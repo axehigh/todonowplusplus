@@ -21,15 +21,53 @@
            </ion-menu-toggle>
 
            <ion-item-divider>
+             <ion-label>Filters</ion-label>
+           </ion-item-divider>
+
+           <!-- Global Category Filters -->
+           <ion-menu-toggle :auto-hide="false">
+             <ion-item button @click="selectGlobalCategory('All')"
+                       :color="isGlobalCategoryMode && categoryFilter === 'All' ? 'secondary' : ''"
+                       :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="listOutline"></ion-icon>
+               <ion-label>All Tasks</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
+           <ion-menu-toggle :auto-hide="false">
+             <ion-item button @click="selectGlobalCategory('Reminder')"
+                       :color="isGlobalCategoryMode && categoryFilter === 'Reminder' ? 'secondary' : ''"
+                       :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="alarmOutline"></ion-icon>
+               <ion-label>Reminder</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
+           <ion-menu-toggle :auto-hide="false">
+             <ion-item button @click="selectGlobalCategory('Do')"
+                       :color="isGlobalCategoryMode && categoryFilter === 'Do' ? 'secondary' : ''"
+                       :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="checkmarkDoneOutline"></ion-icon>
+               <ion-label>Do</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
+           <ion-menu-toggle :auto-hide="false">
+             <ion-item button @click="selectGlobalCategory('Long Task')"
+                       :color="isGlobalCategoryMode && categoryFilter === 'Long Task' ? 'secondary' : ''"
+                       :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="timeOutline"></ion-icon>
+               <ion-label>Long Task</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
+
+           <ion-item-divider>
              <ion-label>Lists</ion-label>
            </ion-item-divider>
 
            <ion-menu-toggle :auto-hide="false" v-for="(list, index) in lists" :key="index">
-             <ion-item button @click="selectList(index)" :color="!isFocusMode && selectedListIndex === index ? 'secondary' : ''" :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="listOutline"></ion-icon>
-               <ion-label>{{ list.name }}</ion-label>
-               <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">{{ list.items.length }}</ion-badge>
-             </ion-item>
+            <ion-item button @click="selectList(index)" :color="!isFocusMode && !isGlobalCategoryMode && selectedListIndex === index ? 'secondary' : ''" :detail="false" class="list-item">
+              <ion-icon slot="start" :icon="listOutline"></ion-icon>
+              <ion-label>{{ list.name }}</ion-label>
+              <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">{{ list.items.length }}</ion-badge>
+            </ion-item>
            </ion-menu-toggle>
             <ion-item v-if="lists.length === 0">
              <ion-label color="medium" class="ion-text-center">No lists</ion-label>
@@ -57,7 +95,7 @@
             <ion-button @click="showCompleted = !showCompleted">
                 <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
             </ion-button>
-            <ion-button @click="toggleSortMode" :color="sortMode === 'priority' ? 'light' : 'light'" v-if="isAuthenticated && (currentList || isFocusMode)">
+            <ion-button @click="toggleSortMode" :color="sortMode === 'priority' ? 'light' : 'light'" v-if="isAuthenticated && (currentList || isFocusMode || isGlobalCategoryMode)">
                 <ion-icon :icon="swapVerticalOutline"></ion-icon>
             </ion-button>
             <ion-button @click="presentRenameListAlert" color="light" v-if="isAuthenticated && !isFocusMode && currentList">
@@ -108,26 +146,9 @@
           <ion-button @click="presentAddListAlert" color="tertiary">Create List</ion-button>
         </div>
 
-        <ion-list v-else-if="currentList || isFocusMode" lines="full" class="todo-list">
-          <!-- Category Filter (All / Reminder / Do / Long Task) -->
-          <ion-item lines="none" class="category-filter">
-            <ion-segment v-model="categoryFilter">
-              <ion-segment-button value="All">
-                <ion-label>All</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="Reminder">
-                <ion-label>Reminder</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="Do">
-                <ion-label>Do</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="Long Task">
-                <ion-label>Long Task</ion-label>
-              </ion-segment-button>
-            </ion-segment>
-          </ion-item>
+        <ion-list v-else-if="currentList || isFocusMode || isGlobalCategoryMode" lines="full" class="todo-list">
           <!-- Inline Quick Add Input moved to the top of the list -->
-          <ion-item v-if="!isFocusMode" class="quick-add-item">
+          <ion-item v-if="!isFocusMode && !isGlobalCategoryMode" class="quick-add-item">
             <ion-input
               v-model="quickAddText"
               placeholder="Add a task..."
@@ -139,7 +160,7 @@
             </ion-button>
           </ion-item>
 
-          <ion-reorder-group :disabled="isFocusMode || !showCompleted || sortMode === 'priority'" @ionItemReorder="handleReorder($event)">
+          <ion-reorder-group :disabled="isFocusMode || isGlobalCategoryMode || !showCompleted || sortMode === 'priority'" @ionItemReorder="handleReorder($event)">
             <ion-item-sliding v-for="(todo, index) in filteredItems" :key="todo.raw">
                 <ion-item>
                 <ion-checkbox slot="start" :checked="todo.completed" @ionChange="toggleTodoItem(todo, index)" mode="ios"></ion-checkbox>
@@ -186,7 +207,7 @@
 
         </ion-list>
 
-        <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0 && !isFocusMode">
+        <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0 && !isFocusMode && !isGlobalCategoryMode">
           <ion-fab-button @click="presentAlert" class="gradient-fab">
             <ion-icon :icon="add"></ion-icon>
           </ion-fab-button>
@@ -197,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonSegment, IonSegmentButton } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput } from '@ionic/vue';
 import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
 import { ref, computed, nextTick } from 'vue';
 import { todoService, dropboxService, gamificationService } from '../services';
@@ -207,6 +228,7 @@ import AddTodoModal from '../components/AddTodoModal.vue';
 const lists = todoService.lists;
 const selectedListIndex = ref(0);
 const isFocusMode = ref(false);
+const isGlobalCategoryMode = ref(false);
 const isAuthenticated = ref(false);
 const showCompleted = ref(true);
 const quickAddText = ref('');
@@ -218,44 +240,48 @@ const funMode = computed(() => gamificationService.funMode.value);
 const reducedMotion = computed(() => gamificationService.reducedMotion.value);
 
 const currentList = computed(() => {
-    if (isFocusMode.value) return null;
+    if (isFocusMode.value || isGlobalCategoryMode.value) return null;
     return lists.value[selectedListIndex.value];
 });
 
 const pageTitle = computed(() => {
     if (isFocusMode.value) return 'Focus';
+    if (isGlobalCategoryMode.value) return categoryFilter.value === 'All' ? 'All Tasks' : categoryFilter.value;
     return currentList.value ? currentList.value.name : 'My Todos';
 });
 
 const filteredItems = computed(() => {
     let items: TodoItem[] = [];
 
-    if (isFocusMode.value) {
+    if (isFocusMode.value || isGlobalCategoryMode.value) {
         // Aggregate items from all lists
         for (const list of lists.value) {
             items = items.concat(list.items);
         }
-
-        // Filter for Focus: Overdue, Today, or Priority A
-        items = items.filter(item => {
-            if (item.completed && !showCompleted.value) return false;
-            // If completed, maybe we don't show in Focus unless it was just completed?
-            // Usually Focus is for active tasks. Let's hide completed in Focus by default unless showCompleted is true.
-
-            const isOverdue = todoService.isOverdue(item.dueDate);
-            const isDueToday = todoService.isDueToday(item.dueDate);
-            const isHighPriority = item.priority === 'A';
-
-            return isOverdue || isDueToday || isHighPriority;
-        });
+        if (isFocusMode.value) {
+          // Filter for Focus: Overdue, Today, or Priority A
+          items = items.filter(item => {
+              if (item.completed && !showCompleted.value) return false;
+              const overdue = todoService.isOverdue(item.dueDate);
+              const dueToday = todoService.isDueToday(item.dueDate);
+              const highPriority = item.priority === 'A';
+              return overdue || dueToday || highPriority;
+          });
+        }
     } else {
         if (!currentList.value) return [];
         items = currentList.value.items;
     }
 
-    // Apply category filter if set (works in both normal and Focus views)
-    if (categoryFilter.value !== 'All') {
-        items = items.filter(item => item.category === categoryFilter.value);
+    // Apply category filter ONLY in Global Category mode
+    if (isGlobalCategoryMode.value && categoryFilter.value !== 'All') {
+        if (categoryFilter.value === 'Reminder') {
+            // In Reminder view, show all tasks that have a due date (i.e., an actual reminder).
+            // Keep compatibility with any items explicitly tagged as cat:Reminder.
+            items = items.filter(item => !!item.dueDate || item.category === 'Reminder');
+        } else {
+            items = items.filter(item => item.category === categoryFilter.value);
+        }
     }
 
     if (!showCompleted.value) {
@@ -290,10 +316,20 @@ const filteredItems = computed(() => {
 const selectList = (index: number) => {
     selectedListIndex.value = index;
     isFocusMode.value = false;
+    isGlobalCategoryMode.value = false;
+    // Reset category filter so future Global mode starts clean
+    categoryFilter.value = 'All';
 };
 
 const selectFocusMode = () => {
     isFocusMode.value = true;
+    isGlobalCategoryMode.value = false;
+};
+
+const selectGlobalCategory = (category: 'All' | 'Reminder' | 'Do' | 'Long Task') => {
+    categoryFilter.value = category;
+    isGlobalCategoryMode.value = true;
+    isFocusMode.value = false;
 };
 
 const toggleSortMode = () => {
@@ -326,7 +362,7 @@ const toggleTodoItem = async (todo: TodoItem, index: number) => {
     // If in focus mode, we need to find the real list and index
     const wasCompleted = todo.completed;
     const taskId = todo.text; // use task text as ID for gamification tracking
-    if (isFocusMode.value) {
+    if (isFocusMode.value || isGlobalCategoryMode.value) {
         // Find the list containing this todo
         for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
             const list = lists.value[lIndex];
@@ -383,7 +419,7 @@ function randomConfettiColor() {
 }
 
 const deleteTodoItem = async (todo: TodoItem, index: number) => {
-    if (isFocusMode.value) {
+    if (isFocusMode.value || isGlobalCategoryMode.value) {
         for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
             const list = lists.value[lIndex];
             const tIndex = list.items.indexOf(todo);
@@ -670,7 +706,7 @@ const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
     let listIdx = selectedListIndex.value;
     let todoIdx = index;
 
-    if (isFocusMode.value) {
+    if (isFocusMode.value || isGlobalCategoryMode.value) {
         for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
             const list = lists.value[lIndex];
             const tIndex = list.items.indexOf(todo);
