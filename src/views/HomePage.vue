@@ -115,6 +115,9 @@
       </ion-header>
 
       <ion-content :fullscreen="true" class="ion-padding-top">
+        <!-- Global loading indicator for Dropbox sync (non-refresher) -->
+        <ion-loading :is-open="isLoading" message="Syncing with Dropbox..." spinner="crescent"></ion-loading>
+
         <ion-header collapse="condense">
           <ion-toolbar>
             <ion-title size="large">{{ pageTitle }}</ion-title>
@@ -218,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonLoading } from '@ionic/vue';
 import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
 import { ref, computed, nextTick } from 'vue';
 import { todoService, dropboxService, gamificationService } from '../services';
@@ -234,6 +237,7 @@ const showCompleted = ref(true);
 const quickAddText = ref('');
 const categoryFilter = ref<'All' | 'Reminder' | 'Do' | 'Long Task'>('All');
 const sortMode = ref<'manual' | 'priority'>('manual');
+const isLoading = ref(false);
 const points = computed(() => gamificationService.points.value);
 const streak = computed(() => gamificationService.streak.value);
 const funMode = computed(() => gamificationService.funMode.value);
@@ -342,14 +346,21 @@ const quickAddTodo = async () => {
     quickAddText.value = '';
 };
 
-const checkAuth = () => {
+const checkAuth = async () => {
   isAuthenticated.value = dropboxService.isAuthenticated();
   if (isAuthenticated.value) {
-    todoService.loadTodos();
+    // Show a loading indicator when we fetch from Dropbox outside of pull-to-refresh
+    isLoading.value = true;
+    try {
+      await todoService.loadTodos();
+    } finally {
+      isLoading.value = false;
+    }
   }
 };
 
 onIonViewWillEnter(() => {
+  // Fire and forget; internal method handles its own loading state
   checkAuth();
 });
 
