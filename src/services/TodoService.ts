@@ -187,6 +187,57 @@ export class TodoService {
         await this.saveTodos();
     }
 
+    /**
+     * Returns true if the list can be deleted directly:
+     *  - when it has no items
+     *  - or when all items are completed
+     */
+    canDeleteList(listIndex: number): boolean {
+        const list = this.lists.value[listIndex];
+        if (!list) return false;
+        if (list.items.length === 0) return true;
+        return list.items.every(i => i.completed);
+    }
+
+    /**
+     * Remove the list at the given index (no checks). Caller should validate conditions.
+     */
+    async removeList(listIndex: number) {
+        if (!this.lists.value[listIndex]) return;
+        this.lists.value.splice(listIndex, 1);
+        await this.saveTodos();
+    }
+
+    /**
+     * Move all incomplete (active) todos from one list to another.
+     */
+    async moveIncompleteTodos(fromIndex: number, toIndex: number) {
+        const from = this.lists.value[fromIndex];
+        const to = this.lists.value[toIndex];
+        if (!from || !to) return;
+
+        const remaining: TodoItem[] = [];
+        for (const item of from.items) {
+            if (item.completed) {
+                remaining.push(item);
+            } else {
+                to.items.push(item);
+            }
+        }
+        from.items = remaining;
+        await this.saveTodos();
+    }
+
+    /**
+     * Helper: move incomplete todos to target list, then remove the source list.
+     */
+    async removeListWithMove(listIndex: number, targetIndex: number) {
+        if (listIndex === targetIndex) return;
+        await this.moveIncompleteTodos(listIndex, targetIndex);
+        // After moving, delete the (now possibly empty or completed-only) list
+        await this.removeList(listIndex);
+    }
+
     async updateTimeSpent(listIndex: number, todoIndex: number, minutes: number) {
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;
