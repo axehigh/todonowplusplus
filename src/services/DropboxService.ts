@@ -1,5 +1,6 @@
 import { Dropbox, DropboxAuth } from 'dropbox';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 const WEB_REDIRECT = typeof window !== 'undefined' ? (window.location.origin + '/auth') : 'http://localhost/auth';
 const NATIVE_REDIRECT = 'db-a318e6pi24hal9y://oauth2redirect';
@@ -15,10 +16,37 @@ export class DropboxService {
     // If caller provides explicit redirect, use it; otherwise choose based on platform
     this.redirectUri = redirectUri ?? (Capacitor.isNativePlatform() ? NATIVE_REDIRECT : WEB_REDIRECT);
     this.auth = new DropboxAuth({ clientId: this.clientId });
+  }
 
-    const accessToken = localStorage.getItem('dropbox_access_token');
-    if (accessToken) {
-      this.dbx = new Dropbox({ accessToken });
+  /**
+   * Initialize the SDK client by restoring a previously saved token from
+   * platform-appropriate storage. Must be called on app start.
+   */
+  async init(): Promise<void> {
+    try {
+      // On native, prefer Capacitor Preferences; on web, use localStorage.
+      let token: string | null = null;
+      if (Capacitor.isNativePlatform()) {
+        const { value } = await Preferences.get({ key: 'dropbox_access_token' });
+        token = value ?? null;
+        // One-time migration: if not found in Preferences, check localStorage (older versions)
+        if (!token) {
+          const lsToken = localStorage.getItem('dropbox_access_token');
+          if (lsToken) {
+            token = lsToken;
+            await Preferences.set({ key: 'dropbox_access_token', value: lsToken });
+          }
+        }
+      } else {
+        token = localStorage.getItem('dropbox_access_token');
+      }
+
+      if (token) {
+        this.dbx = new Dropbox({ accessToken: token });
+      }
+    } catch (e) {
+      // If storage is unavailable, fail gracefully.
+      console.warn('DropboxService init failed to restore token:', e);
     }
   }
 
@@ -50,7 +78,11 @@ export class DropboxService {
       }
 
       if (accessToken) {
+        // Persist in both storages for robustness and migration simplicity
         localStorage.setItem('dropbox_access_token', accessToken);
+        if (Capacitor.isNativePlatform()) {
+          Preferences.set({ key: 'dropbox_access_token', value: accessToken }).catch(() => {});
+        }
         this.dbx = new Dropbox({ accessToken });
         return true;
       }
@@ -81,6 +113,9 @@ export class DropboxService {
       }
       if (accessToken) {
         localStorage.setItem('dropbox_access_token', accessToken);
+        if (Capacitor.isNativePlatform()) {
+          Preferences.set({ key: 'dropbox_access_token', value: accessToken }).catch(() => {});
+        }
         this.dbx = new Dropbox({ accessToken });
         return true;
       }
@@ -97,6 +132,9 @@ export class DropboxService {
 
   logout() {
     localStorage.removeItem('dropbox_access_token');
+    if (Capacitor.isNativePlatform()) {
+      Preferences.remove({ key: 'dropbox_access_token' }).catch(() => {});
+    }
     this.dbx = null;
   }
 

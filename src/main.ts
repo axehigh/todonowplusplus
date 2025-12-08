@@ -34,37 +34,20 @@ import '@ionic/vue/css/palettes/dark.system.css';
 /* Theme variables */
 import './theme/variables.css';
 
-/* New: Capacitor deep link handling */
-import { App as CapacitorApp } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
-import { DropboxService } from './services/DropboxService';
-
-/* Configure Dropbox for mobile: custom redirect URI */
-const DROPBOX_APP_KEY = 'a318e6pi24hal9y';
-const DROPBOX_REDIRECT_URI = 'db-a318e6pi24hal9y://oauth2redirect';
-const dropbox = new DropboxService(DROPBOX_APP_KEY, DROPBOX_REDIRECT_URI);
-
-/* Capture deep link and complete OAuth */
-CapacitorApp.addListener('appUrlOpen', ({ url }) => {
-  if (url && url.startsWith(DROPBOX_REDIRECT_URI)) {
-    const ok = dropbox.handleAuthCallbackFromUrl(url);
-    if (ok) {
-      /* Optionally close the browser if still open */
-      Browser.close();
-    }
-  }
-});
+// Initialize persisted auth before mounting the app
+import { dropboxService } from './services';
 
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
 
-router.isReady().then(() => {
+async function bootstrap() {
+  // Restore Dropbox token (uses Capacitor Preferences on native)
+  await dropboxService.init();
+  await router.isReady();
   app.mount('#app');
-});
-
-/* Optional helper to start OAuth (can be called from a button handler) */
-export async function startDropboxOAuth() {
-  const url = dropbox.buildAuthUrlForBrowser();
-  await Browser.open({ url });
 }
+
+bootstrap();
+
+// (Optional) Legacy helper removed — Settings page initiates OAuth.
