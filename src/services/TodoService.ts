@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { DropboxService } from './DropboxService';
+import type { GameTrackService } from './GameTrackService';
 
 export type TaskCategory = 'Reminder' | 'Do' | 'Long Task' | '';
 
@@ -25,9 +26,15 @@ export class TodoService {
     private dropbox: DropboxService;
     public lists = ref<TodoList[]>([]);
     private readonly FILE_PATH = '/todo.txt';
+    private gameTracker: GameTrackService | null = null;
 
     constructor(dropbox: DropboxService) {
         this.dropbox = dropbox;
+    }
+
+    /** Optional: allow wiring the game tracker so we can reflect task renames */
+    setGameTracker(tracker: GameTrackService) {
+        this.gameTracker = tracker;
     }
 
     async loadTodos() {
@@ -169,12 +176,22 @@ export class TodoService {
         if (!list || !list.items[todoIndex]) return;
 
         const item = list.items[todoIndex];
+        const oldText = item.text;
 
         if (updates.text !== undefined) item.text = updates.text;
         if (updates.priority !== undefined) item.priority = updates.priority || undefined;
         if (updates.dueDate !== undefined) item.dueDate = updates.dueDate || undefined;
         if (updates.category !== undefined) item.category = updates.category || undefined;
         if (updates.timeSpent !== undefined) item.timeSpent = updates.timeSpent;
+
+        // If the text changed, update the game tracking file to keep IDs in sync
+        if (this.gameTracker && updates.text !== undefined && oldText !== updates.text) {
+            try {
+                await this.gameTracker.rename(oldText, updates.text);
+            } catch (e) {
+                console.warn('TodoService: failed to update game tracker on rename', e);
+            }
+        }
 
         await this.saveTodos();
     }

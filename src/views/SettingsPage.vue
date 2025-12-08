@@ -19,6 +19,25 @@
             <ion-label>Dark Mode</ion-label>
             <ion-toggle slot="end" :checked="isDark" @ionChange="toggleDarkMode"></ion-toggle>
         </ion-item>
+        <ion-item-divider>
+          <ion-label>Fun & Gamification</ion-label>
+        </ion-item-divider>
+        <ion-item>
+          <ion-label>Fun Mode</ion-label>
+          <ion-toggle slot="end" :checked="funMode" @ionChange="toggleFunMode"></ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-label>Sound Effects</ion-label>
+          <ion-toggle slot="end" :checked="sound" @ionChange="toggleSound"></ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-label>Reduced Motion</ion-label>
+          <ion-select interface="popover" :value="reducedMotionSetting" @ionChange="changeReducedMotion($event)" placeholder="Follow System">
+            <ion-select-option value="system">Follow System</ion-select-option>
+            <ion-select-option value="on">On</ion-select-option>
+            <ion-select-option value="off">Off</ion-select-option>
+          </ion-select>
+        </ion-item>
       </ion-list>
 
       <div class="ion-padding">
@@ -38,9 +57,10 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonToggle } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonToggle, IonItemDivider, IonSelect, IonSelectOption } from '@ionic/vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { dropboxService } from '../services';
+import { gamificationService } from '../services';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
@@ -49,6 +69,13 @@ import type { PluginListenerHandle } from '@capacitor/core';
 const clientId = ref('');
 const isAuthenticated = ref(false);
 const isDark = ref(false);
+const funMode = computed(() => gamificationService.funMode.value);
+const sound = computed(() => gamificationService.sound.value);
+const reducedMotionSetting = computed(() => {
+  const override = gamificationService.reducedMotionOverride.value;
+  if (override === null) return 'system';
+  return override ? 'on' : 'off';
+});
 
 // Compute redirect based on platform and current App Key
 const computedRedirectUri = computed(() => {
@@ -111,6 +138,21 @@ const toggleDarkMode = (event: any) => {
         document.body.classList.remove('dark');
         localStorage.setItem('theme', 'light');
     }
+};
+
+const toggleFunMode = (event: any) => {
+  gamificationService.setFunMode(!!event.detail.checked);
+};
+
+const toggleSound = (event: any) => {
+  gamificationService.setSound(!!event.detail.checked);
+};
+
+const changeReducedMotion = (event: any) => {
+  const value = event.detail.value;
+  if (value === 'system') gamificationService.setReducedMotion(null);
+  else if (value === 'on') gamificationService.setReducedMotion(true);
+  else gamificationService.setReducedMotion(false);
 };
 
 const connect = async () => {

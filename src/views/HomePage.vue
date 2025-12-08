@@ -46,6 +46,14 @@
           </ion-buttons>
           <ion-title>{{ pageTitle }}</ion-title>
           <ion-buttons slot="end">
+            <ion-badge v-if="isAuthenticated && funMode" color="tertiary" class="header-badge" aria-label="Streak">
+              <ion-icon :icon="flameOutline" class="badge-icon"></ion-icon>
+              {{ streak }}
+            </ion-badge>
+            <ion-badge v-if="isAuthenticated && funMode" color="secondary" class="header-badge" aria-label="Points">
+              <ion-icon :icon="starOutline" class="badge-icon"></ion-icon>
+              {{ points }}
+            </ion-badge>
             <ion-button @click="showCompleted = !showCompleted">
                 <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
             </ion-button>
@@ -190,9 +198,9 @@
 
 <script setup lang="ts">
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonSegment, IonSegmentButton } from '@ionic/vue';
-import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline } from 'ionicons/icons';
-import { ref, computed } from 'vue';
-import { todoService, dropboxService } from '../services';
+import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
+import { ref, computed, nextTick } from 'vue';
+import { todoService, dropboxService, gamificationService } from '../services';
 import { TodoItem } from '../services/TodoService';
 import AddTodoModal from '../components/AddTodoModal.vue';
 
@@ -204,6 +212,10 @@ const showCompleted = ref(true);
 const quickAddText = ref('');
 const categoryFilter = ref<'All' | 'Reminder' | 'Do' | 'Long Task'>('All');
 const sortMode = ref<'manual' | 'priority'>('manual');
+const points = computed(() => gamificationService.points.value);
+const streak = computed(() => gamificationService.streak.value);
+const funMode = computed(() => gamificationService.funMode.value);
+const reducedMotion = computed(() => gamificationService.reducedMotion.value);
 
 const currentList = computed(() => {
     if (isFocusMode.value) return null;
@@ -312,6 +324,8 @@ const handleRefresh = async (event: any) => {
 
 const toggleTodoItem = async (todo: TodoItem, index: number) => {
     // If in focus mode, we need to find the real list and index
+    const wasCompleted = todo.completed;
+    const taskId = todo.text; // use task text as ID for gamification tracking
     if (isFocusMode.value) {
         // Find the list containing this todo
         for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
@@ -319,13 +333,54 @@ const toggleTodoItem = async (todo: TodoItem, index: number) => {
             const tIndex = list.items.indexOf(todo);
             if (tIndex !== -1) {
                 await todoService.toggleTodo(lIndex, tIndex);
+                if (!wasCompleted && todo.completed) {
+                  await handleTaskCompletedEffect(taskId);
+                }
                 break;
             }
         }
     } else {
         await todoService.toggleTodo(selectedListIndex.value, index);
+        if (!wasCompleted && todo.completed) {
+          await handleTaskCompletedEffect(taskId);
+        }
     }
 };
+
+async function handleTaskCompletedEffect(taskId: string) {
+  // Award points only once per unique task ID stored in Dropbox game_track.txt
+  const awarded = await gamificationService.onTaskCompletedIfEligible(taskId);
+  if (!awarded) return; // already counted before
+  if (!funMode.value) return;
+  if (reducedMotion.value) return;
+  // Trigger a quick confetti burst from the header area
+  nextTick(() => spawnConfetti());
+}
+
+function spawnConfetti() {
+  const container = document.querySelector('#main-content') as HTMLElement | null;
+  if (!container) return;
+  const burst = document.createElement('div');
+  burst.className = 'confetti-burst';
+  const count = 14;
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('span');
+    piece.className = 'confetti-piece';
+    piece.style.setProperty('--rx', (Math.random() * 360).toFixed(0));
+    piece.style.setProperty('--dx', (Math.random() * 200 - 100).toFixed(0));
+    piece.style.setProperty('--dy', (-Math.random() * 200 - 80).toFixed(0));
+    piece.style.setProperty('--delay', (Math.random() * 0.1).toFixed(2) + 's');
+    piece.style.background = randomConfettiColor();
+    burst.appendChild(piece);
+  }
+  container.appendChild(burst);
+  setTimeout(() => burst.remove(), 1200);
+}
+
+function randomConfettiColor() {
+  const colors = ['#ff0080', '#00e5ff', '#6200ea', '#ffd400', '#34c759'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
 
 const deleteTodoItem = async (todo: TodoItem, index: number) => {
     if (isFocusMode.value) {
@@ -696,5 +751,33 @@ const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
 
 .category-filter {
     --inner-padding-end: 0;
+}
+
+.header-badge {
+  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+.badge-icon { margin-right: 4px; }
+
+/* Confetti */
+.confetti-burst {
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  pointer-events: none;
+}
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  animation: confetti-pop 1s ease-out forwards;
+  transform: translate3d(0,0,0) rotate(calc(var(--rx) * 1deg));
+  animation-delay: var(--delay, 0s);
+}
+@keyframes confetti-pop {
+  0% { opacity: 1; transform: translate(0,0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -120px)) rotate(360deg); }
 }
 </style>
