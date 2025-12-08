@@ -1,4 +1,4 @@
-**Todonow++**
+**Todonow++**   
 A simple todo app sync with a textfile in dropbox.
 
 <img width="422" height="363" 
@@ -11,6 +11,6 @@ An idea I had many years ago was to wrap a todo mobile app
 around a text file so that I could add todo on the move 
 as well when sitting on my desktop.
 
-I created 2 versions for android, but eventually I lost interest in the project. 
+I created two versions for android, but eventually I lost interest in the project. 
 
 I picked it up again now, and with Antigravity and Webstorm I quickly had the same features as before.
