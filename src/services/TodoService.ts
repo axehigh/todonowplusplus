@@ -401,4 +401,27 @@ export class TodoService {
         // 3. Save updated todo.txt
         await this.saveTodos();
     }
+
+    /**
+     * Loads completed tasks from /done.txt in Dropbox and returns them as TodoItem[]
+     * This is read-only; it does not modify in-memory lists.
+     * If the file does not exist or the user is not authenticated, returns an empty array.
+     */
+    async loadDoneItems(): Promise<TodoItem[]> {
+        const donePath = '/done.txt';
+        const items: TodoItem[] = [];
+        if (!this.dropbox.isAuthenticated()) return items;
+        let content = '';
+        try {
+            content = await this.dropbox.readFile(donePath);
+        } catch (e) {
+            // File may not exist yet; treat as empty
+            return items;
+        }
+        const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#'));
+        for (const line of lines) {
+            items.push(this.parseTodoLine(line));
+        }
+        return items;
+    }
 }

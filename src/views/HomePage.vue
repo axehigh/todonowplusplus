@@ -72,6 +72,16 @@
             <ion-item v-if="lists.length === 0">
              <ion-label color="medium" class="ion-text-center">No lists</ion-label>
            </ion-item>
+
+           <ion-item-divider class="ion-margin-top">
+             <ion-label>Archive</ion-label>
+           </ion-item-divider>
+           <ion-menu-toggle :auto-hide="true" v-if="isAuthenticated">
+             <ion-item button router-link="/done" :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="checkmarkDoneOutline"></ion-icon>
+               <ion-label>Done</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
          </ion-list>
       </ion-content>
     </ion-menu>
