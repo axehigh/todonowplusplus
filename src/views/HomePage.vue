@@ -341,9 +341,11 @@ const toggleSortMode = () => {
 };
 
 const quickAddTodo = async () => {
-    if (!quickAddText.value.trim()) return;
-    await todoService.addTodo(selectedListIndex.value, quickAddText.value.trim());
+    // Clear the field immediately for better UX, then add asynchronously
+    const text = quickAddText.value.trim();
+    if (!text) return;
     quickAddText.value = '';
+    await todoService.addTodo(selectedListIndex.value, text);
 };
 
 const checkAuth = async () => {
