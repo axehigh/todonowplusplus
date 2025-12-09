@@ -14,6 +14,14 @@
       <ion-input v-model="text" placeholder="What needs to be done?"></ion-input>
     </ion-item>
 
+    <!-- List selector (only in edit mode and when there are multiple lists) -->
+    <ion-item v-if="isEdit && listNames.length > 1">
+      <ion-label>List</ion-label>
+      <ion-select v-model.number="selectedListIndex" interface="popover">
+        <ion-select-option v-for="(name, idx) in listNames" :key="idx" :value="idx">{{ name }}</ion-select-option>
+      </ion-select>
+    </ion-item>
+
     <ion-item>
       <ion-label>Priority</ion-label>
       <ion-select v-model="priority" interface="popover">
@@ -78,6 +86,8 @@ const props = defineProps<{
   initialCategory?: string;
   initialDueDate?: string; // YYYY-MM-DD
   initialTimeSpent?: number; // minutes
+  listNames?: string[];
+  initialListIndex?: number;
 }>();
 
 const isEdit = computed(() => (props.mode || 'add') === 'edit');
@@ -87,6 +97,8 @@ const priority = ref(props.initialPriority || '');
 const category = ref(props.initialCategory || '');
 const dueDate = ref(props.initialDueDate || '');
 const timeSpentLocal = ref<number | undefined>(props.initialTimeSpent);
+const listNames = computed(() => props.listNames ?? []);
+const selectedListIndex = ref<number>(typeof props.initialListIndex === 'number' ? props.initialListIndex : 0);
 
 const cancel = () => {
   modalController.dismiss(null, 'cancel');
@@ -132,6 +144,9 @@ const save = () => {
     if (typeof timeSpentLocal.value === 'number' && timeSpentLocal.value >= 0) {
       updates.timeSpent = timeSpentLocal.value;
     }
+
+    // Always include destination list index so caller can decide whether to move
+    updates.moveToListIndex = selectedListIndex.value;
 
     modalController.dismiss(updates, 'confirm');
   }

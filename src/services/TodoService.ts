@@ -171,6 +171,22 @@ export class TodoService {
         await this.saveTodos();
     }
 
+    /**
+     * Move a single todo from one list to another.
+     * The item will be appended to the end of the destination list.
+     */
+    async moveTodo(fromListIndex: number, todoIndex: number, toListIndex: number) {
+        if (fromListIndex === toListIndex) return; // nothing to do
+        const fromList = this.lists.value[fromListIndex];
+        const toList = this.lists.value[toListIndex];
+        if (!fromList || !toList) return;
+        if (todoIndex < 0 || todoIndex >= fromList.items.length) return;
+
+        const [item] = fromList.items.splice(todoIndex, 1);
+        toList.items.push(item);
+        await this.saveTodos();
+    }
+
     async updateTodo(listIndex: number, todoIndex: number, updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>>) {
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;

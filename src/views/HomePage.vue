@@ -193,6 +193,9 @@
                 </ion-item-option>
                 </ion-item-options>
                 <ion-item-options side="end">
+                <ion-item-option color="tertiary" :disabled="lists.length <= 1" @click="presentMoveTodoAlert(todo, index)">
+                    <ion-icon :icon="swapVerticalOutline"></ion-icon>
+                </ion-item-option>
                 <ion-item-option color="danger" @click="deleteTodoItem(todo, index)">
                     <ion-icon :icon="trashOutline"></ion-icon>
                 </ion-item-option>
@@ -570,6 +573,63 @@ const presentAddListAlert = async () => {
   await alert.present();
 };
 
+// Present a picker to move a todo to another list
+const presentMoveTodoAlert = async (todo: TodoItem, index: number) => {
+  // Determine actual source list/index depending on mode
+  let sourceListIndex = selectedListIndex.value;
+  let sourceTodoIndex = index;
+  if (isFocusMode.value || isGlobalCategoryMode.value) {
+    sourceListIndex = -1;
+    sourceTodoIndex = -1;
+    for (let lIndex = 0; lIndex < lists.value.length; lIndex++) {
+      const tIndex = lists.value[lIndex].items.indexOf(todo);
+      if (tIndex !== -1) {
+        sourceListIndex = lIndex;
+        sourceTodoIndex = tIndex;
+        break;
+      }
+    }
+    if (sourceListIndex === -1) return; // not found; nothing to do
+  }
+
+  // Build destination options excluding the current list
+  const options = lists.value
+    .map((l, idx) => ({ label: l.name, value: String(idx), idx }))
+    .filter(o => o.idx !== sourceListIndex);
+
+  if (options.length === 0) {
+    const info = await alertController.create({
+      header: 'Move Task',
+      message: 'No other lists available to move this task to.',
+      buttons: ['OK']
+    });
+    await info.present();
+    return;
+  }
+
+  const alert = await alertController.create({
+    header: 'Move to list',
+    inputs: options.map(o => ({
+      label: o.label,
+      type: 'radio',
+      value: o.value
+    })),
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Move',
+        handler: async (toValue: string) => {
+          const toIdx = parseInt(toValue, 10);
+          if (!Number.isFinite(toIdx)) return false;
+          await todoService.moveTodo(sourceListIndex, sourceTodoIndex, toIdx);
+          return true;
+        }
+      }
+    ]
+  });
+  await alert.present();
+};
+
 const presentRenameListAlert = async () => {
   if (!currentList.value) return;
 
@@ -740,13 +800,28 @@ const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
         initialCategory: todo.category || '',
         initialDueDate: todo.dueDate || '',
         initialTimeSpent: typeof todo.timeSpent === 'number' ? todo.timeSpent : undefined,
+        listNames: lists.value.map(l => l.name),
+        initialListIndex: listIdx,
       }
     });
 
     modal.onWillDismiss().then(async (ev) => {
       if (ev.role === 'confirm' && ev.data) {
-        const updates = ev.data as Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>>;
-        await todoService.updateTodo(listIdx, todoIdx, updates);
+        const updates = ev.data as any;
+        // Save field updates on current item first
+        await todoService.updateTodo(listIdx, todoIdx, {
+          text: updates.text,
+          priority: updates.priority,
+          dueDate: updates.dueDate,
+          category: updates.category,
+          timeSpent: updates.timeSpent,
+        });
+
+        // Move if destination list changed
+        const toListIdx: number | undefined = updates.moveToListIndex;
+        if (typeof toListIdx === 'number' && toListIdx !== listIdx) {
+          await todoService.moveTodo(listIdx, todoIdx, toListIdx);
+        }
       }
     });
 
