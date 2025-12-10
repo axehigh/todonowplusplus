@@ -26,7 +26,7 @@
         </ion-card>
       </div>
 
-      <ion-list v-else lines="full">
+      <ion-list v-else lines="full" class="todo-list">
         <ion-item v-for="(todo, idx) in sortedDone" :key="idx">
           <ion-label>
             <h2>

@@ -16,8 +16,12 @@
           <ion-input v-model="clientId" placeholder="Enter your App Key"></ion-input>
         </ion-item>
         <ion-item>
-            <ion-label>Dark Mode</ion-label>
-            <ion-toggle slot="end" :checked="isDark" @ionChange="toggleDarkMode"></ion-toggle>
+          <ion-label>Theme</ion-label>
+          <ion-select interface="popover" :value="themeMode" @ionChange="changeTheme($event)" placeholder="Follow System">
+            <ion-select-option value="system">System</ion-select-option>
+            <ion-select-option value="light">Light</ion-select-option>
+            <ion-select-option value="dark">Dark</ion-select-option>
+          </ion-select>
         </ion-item>
         <ion-item-divider>
           <ion-label>Fun & Gamification</ion-label>
@@ -57,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonToggle, IonItemDivider, IonSelect, IonSelectOption } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { dropboxService } from '../services';
 import { gamificationService } from '../services';
@@ -65,10 +69,11 @@ import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
+import { getTheme, setTheme } from '../theme/theme';
 
 const clientId = ref('');
 const isAuthenticated = ref(false);
-const isDark = ref(false);
+const themeMode = ref<'system' | 'light' | 'dark'>('system');
 const funMode = computed(() => gamificationService.funMode.value);
 const sound = computed(() => gamificationService.sound.value);
 const reducedMotionSetting = computed(() => {
@@ -95,12 +100,8 @@ onMounted(() => {
   if (storedId) clientId.value = storedId;
   isAuthenticated.value = dropboxService.isAuthenticated();
 
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const storedTheme = localStorage.getItem('theme');
-  if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
-      isDark.value = true;
-      document.body.classList.add('dark');
-  }
+  // Initialize theme picker with current setting
+  themeMode.value = getTheme();
 
   // Handle OAuth redirect on native: db-<APP_KEY>://oauth2redirect#access_token=...
   if (Capacitor.isNativePlatform()) {
@@ -129,15 +130,10 @@ onBeforeUnmount(() => {
   urlOpenHandle?.remove?.();
 });
 
-const toggleDarkMode = (event: any) => {
-    isDark.value = event.detail.checked;
-    if (isDark.value) {
-        document.body.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.body.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-    }
+const changeTheme = (event: any) => {
+  const value = event.detail.value as 'system' | 'light' | 'dark';
+  themeMode.value = value;
+  setTheme(value);
 };
 
 const toggleFunMode = (event: any) => {

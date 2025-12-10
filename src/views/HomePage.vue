@@ -90,7 +90,7 @@
       <ion-header :translucent="true">
         <ion-toolbar class="gradient-toolbar">
           <ion-buttons slot="start">
-            <ion-menu-button color="light"></ion-menu-button>
+              <ion-menu-button id="btnOpenMenu" color="light" aria-label="Open Menu"></ion-menu-button>
           </ion-buttons>
           <ion-title>{{ pageTitle }}</ion-title>
           <ion-buttons slot="end">
@@ -102,24 +102,41 @@
               <ion-icon :icon="starOutline" class="badge-icon"></ion-icon>
               {{ points }}
             </ion-badge>
-            <ion-button @click="showCompleted = !showCompleted">
-                <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
-            </ion-button>
-            <ion-button @click="toggleSortMode" :color="sortMode === 'priority' ? 'light' : 'light'" v-if="isAuthenticated && (currentList || isFocusMode || isGlobalCategoryMode)">
-                <ion-icon :icon="swapVerticalOutline"></ion-icon>
-            </ion-button>
-            <ion-button @click="presentRenameListAlert" color="light" v-if="isAuthenticated && !isFocusMode && currentList">
-                <ion-icon :icon="createOutline"></ion-icon>
-            </ion-button>
-            <ion-button @click="presentDeleteListAlert" color="light" v-if="isAuthenticated && !isFocusMode && currentList">
-                <ion-icon :icon="trashOutline"></ion-icon>
-            </ion-button>
-            <ion-button @click="presentArchiveAlert" color="light" v-if="isAuthenticated">
-                <ion-icon :icon="archiveOutline"></ion-icon>
-            </ion-button>
-            <ion-button router-link="/settings" color="light">
-              <ion-icon :icon="settingsOutline"></ion-icon>
-            </ion-button>
+            <span class="ag-tooltip" :data-label="showCompleted ? 'Hide Completed' : 'Show Completed'">
+              <ion-button id="btnToggleCompleted" @click="showCompleted = !showCompleted" :aria-label="showCompleted ? 'Hide Completed' : 'Show Completed'">
+                  <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
+              </ion-button>
+            </span>
+
+            <span class="ag-tooltip" v-if="isAuthenticated && (currentList || isFocusMode || isGlobalCategoryMode)" :data-label="sortMode === 'priority' ? 'Switch to Manual Sort' : 'Switch to Priority Sort'">
+              <ion-button id="btnSort" @click="toggleSortMode" :color="sortMode === 'priority' ? 'light' : 'light'" :aria-label="sortMode === 'priority' ? 'Switch to Manual Sort' : 'Switch to Priority Sort'">
+                  <ion-icon :icon="swapVerticalOutline"></ion-icon>
+              </ion-button>
+            </span>
+
+            <span class="ag-tooltip" v-if="isAuthenticated && !isFocusMode && currentList" :data-label="'Rename List'">
+              <ion-button id="btnRenameList" @click="presentRenameListAlert" color="light" aria-label="Rename List">
+                  <ion-icon :icon="createOutline"></ion-icon>
+              </ion-button>
+            </span>
+
+            <span class="ag-tooltip" v-if="isAuthenticated && !isFocusMode && currentList" :data-label="'Delete List'">
+              <ion-button id="btnDeleteList" @click="presentDeleteListAlert" color="light" aria-label="Delete List">
+                  <ion-icon :icon="trashOutline"></ion-icon>
+              </ion-button>
+            </span>
+
+            <span class="ag-tooltip" v-if="isAuthenticated" :data-label="'Archive Completed'">
+              <ion-button id="btnArchive" @click="presentArchiveAlert" color="light" aria-label="Archive Completed">
+                  <ion-icon :icon="archiveOutline"></ion-icon>
+              </ion-button>
+            </span>
+
+            <span class="ag-tooltip" :data-label="'Settings'">
+              <ion-button id="btnSettings" router-link="/settings" color="light" aria-label="Settings">
+                <ion-icon :icon="settingsOutline"></ion-icon>
+              </ion-button>
+            </span>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>

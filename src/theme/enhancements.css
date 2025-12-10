@@ -1,0 +1,162 @@
+/* Visual polish enhancements for the app
+   - subtle shadows
+   - larger task title fonts
+   - section background separation
+   - animated checkmark
+*/
+
+/* Subtle app background separation using a very light gradient */
+ion-content {
+  --background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.01));
+}
+
+/* Dark mode tweaks: soften with a faint light gradient and stronger shadows */
+.ion-palette-dark ion-content {
+  --background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+}
+
+/* Cards: gentle elevation */
+ion-card {
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.ion-palette-dark ion-card {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+ion-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+/* Todo list rows: add soft card-like appearance */
+.todo-list ion-item {
+  --background: var(--ion-background-color, #fff);
+  border-radius: 12px;
+  margin: 6px 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.ion-palette-dark .todo-list ion-item {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* Quick add row: slightly tinted to separate from tasks */
+.todo-list .quick-add-item {
+  --background: color-mix(in srgb, var(--ion-color-light, #f4f5f8) 60%, transparent);
+}
+
+/* Section divider within Ion Lists (if used) */
+ion-item-divider {
+  --background: color-mix(in srgb, var(--ion-color-light, #f4f5f8) 75%, transparent);
+  --color: var(--ion-color-medium);
+  font-weight: 600;
+}
+
+/* Larger, clearer task titles */
+.todo-list ion-label h2 {
+  font-size: 1.12rem; /* up from default ~1rem */
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: 0.1px;
+}
+
+/* Keep metadata subtle */
+.todo-list ion-label p.due-date {
+  opacity: 0.85;
+}
+
+/* Animated checkmark for ion-checkbox in task rows */
+@keyframes ag-pop {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Use ::part to style Ionic checkbox internals */
+.todo-list ion-checkbox::part(container) {
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+/* When checked, do a quick pop animation */
+.todo-list ion-checkbox[aria-checked="true"]::part(container) {
+  animation: ag-pop 200ms ease;
+}
+
+/* Optional: draw mark subtly when checked */
+.todo-list ion-checkbox::part(mark) {
+  transition: stroke-dashoffset 220ms ease;
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18; /* hidden */
+}
+
+.todo-list ion-checkbox[aria-checked="true"]::part(mark) {
+  stroke-dashoffset: 0; /* drawn */
+}
+
+/* ----------------------------------------------------
+   CSS-only tooltips for toolbar icons
+   Usage: wrap button with <span class="ag-tooltip" :data-label="'Text'"> ...
+----------------------------------------------------- */
+.ag-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ag-tooltip::after,
+.ag-tooltip::before {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 9999;
+}
+
+/* Bubble */
+.ag-tooltip::after {
+  content: attr(data-label);
+  bottom: -16px; /* anchor at bottom of wrapper */
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+/* Arrow */
+.ag-tooltip::before {
+  content: "";
+  bottom: 8px;
+  width: 8px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  transform: translateX(-50%) translateY(6px) rotate(45deg);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+/* Show on hover/focus */
+.ag-tooltip:hover::after,
+.ag-tooltip:hover::before,
+.ag-tooltip:focus-within::after,
+.ag-tooltip:focus-within::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Dark mode: adjust bubble for contrast */
+.ion-palette-dark .ag-tooltip::after,
+.ion-palette-dark .ag-tooltip::before {
+  background: rgba(20, 20, 20, 0.9);
+}
+.ion-palette-dark .ag-tooltip::after {
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.08);
+}

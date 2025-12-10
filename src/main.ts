@@ -23,25 +23,27 @@ import '@ionic/vue/css/display.css';
 /**
  * Ionic Dark Mode
  * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
+ * Switch to class-based palette so we can explicitly control
+ * light/dark or follow system from Settings.
  */
-
-/* @import '@ionic/vue/css/palettes/dark.always.css'; */
-/* @import '@ionic/vue/css/palettes/dark.class.css'; */
-import '@ionic/vue/css/palettes/dark.system.css';
+import '@ionic/vue/css/palettes/dark.class.css';
 
 /* Theme variables */
 import './theme/variables.css';
+/* Visual polish enhancements */
+import './theme/enhancements.css';
 
 // Initialize persisted auth before mounting the app
 import { dropboxService } from './services';
+import { initTheme } from './theme/theme';
 
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
 
 async function bootstrap() {
+  // Initialize theme (System/Light/Dark) before app renders
+  initTheme();
   // Restore Dropbox token (uses Capacitor Preferences on native)
   await dropboxService.init();
   await router.isReady();
