@@ -82,6 +82,16 @@
                <ion-label>Done</ion-label>
              </ion-item>
            </ion-menu-toggle>
+
+           <ion-item-divider class="ion-margin-top">
+             <ion-label>Settings</ion-label>
+           </ion-item-divider>
+           <ion-menu-toggle :auto-hide="true">
+             <ion-item button router-link="/settings" :detail="false" class="list-item">
+               <ion-icon slot="start" :icon="settingsOutline"></ion-icon>
+               <ion-label>Settings</ion-label>
+             </ion-item>
+           </ion-menu-toggle>
          </ion-list>
       </ion-content>
     </ion-menu>
@@ -126,17 +136,6 @@
               </ion-button>
             </span>
 
-            <span class="ag-tooltip" v-if="isAuthenticated" :data-label="'Archive Completed'">
-              <ion-button id="btnArchive" @click="presentArchiveAlert" color="light" aria-label="Archive Completed">
-                  <ion-icon :icon="archiveOutline"></ion-icon>
-              </ion-button>
-            </span>
-
-            <span class="ag-tooltip" :data-label="'Settings'">
-              <ion-button id="btnSettings" router-link="/settings" color="light" aria-label="Settings">
-                <ion-icon :icon="settingsOutline"></ion-icon>
-              </ion-button>
-            </span>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -252,7 +251,7 @@
 
 <script setup lang="ts">
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonLoading } from '@ionic/vue';
-import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, archiveOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
+import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
 import { ref, computed, nextTick } from 'vue';
 import { todoService, dropboxService, gamificationService } from '../services';
 import { TodoItem } from '../services/TodoService';
@@ -578,26 +577,37 @@ const presentAddListAlert = async () => {
       }
     ],
     buttons: [
-      {
-        text: 'Cancel',
-        role: 'cancel'
-      },
-      {
-        text: 'Create',
-        handler: (data) => {
-          if (data.name) {
-            todoService.addList(data.name);
-            // Switch to the new list (it will be at the end)
-            setTimeout(() => {
-                selectedListIndex.value = lists.value.length - 1;
-            }, 100);
-          }
-        }
-      }
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Create', role: 'confirm' }
     ]
   });
 
   await alert.present();
+
+  // Focus the input and enable Enter to submit
+  const inputEl = alert.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+  inputEl?.focus();
+  const onKey = async (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const name = (inputEl?.value || '').trim();
+      await alert.dismiss({ name }, 'confirm');
+    }
+  };
+  alert.addEventListener('keydown', onKey);
+
+  const { role, data } = await alert.onWillDismiss();
+  alert.removeEventListener('keydown', onKey);
+  if (role === 'confirm') {
+    const name = (data?.name || '').trim();
+    if (name) {
+      todoService.addList(name);
+      // Switch to the new list (it will be at the end)
+      setTimeout(() => {
+        selectedListIndex.value = lists.value.length - 1;
+      }, 100);
+    }
+  }
 };
 
 // Present a picker to move a todo to another list
@@ -671,22 +681,33 @@ const presentRenameListAlert = async () => {
       }
     ],
     buttons: [
-      {
-        text: 'Cancel',
-        role: 'cancel'
-      },
-      {
-        text: 'Rename',
-        handler: async (data) => {
-          if (data.name && data.name !== currentList.value?.name) {
-            await todoService.renameList(selectedListIndex.value, data.name);
-          }
-        }
-      }
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Rename', role: 'confirm' }
     ]
   });
 
   await alert.present();
+
+  // Focus and Enter key to confirm
+  const inputEl = alert.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+  inputEl?.focus();
+  const onKey = async (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const name = (inputEl?.value || '').trim();
+      await alert.dismiss({ name }, 'confirm');
+    }
+  };
+  alert.addEventListener('keydown', onKey);
+
+  const { role, data } = await alert.onWillDismiss();
+  alert.removeEventListener('keydown', onKey);
+  if (role === 'confirm') {
+    const name = (data?.name || '').trim();
+    if (name && name !== currentList.value?.name) {
+      await todoService.renameList(selectedListIndex.value, name);
+    }
+  }
 };
 
 const presentDeleteListAlert = async () => {
@@ -781,25 +802,7 @@ const presentAlert = async () => {
   await modal.present();
 };
 
-const presentArchiveAlert = async () => {
-    const alert = await alertController.create({
-        header: 'Archive Completed?',
-        message: 'This will move all completed todos to done.txt. This action cannot be undone from the app.',
-        buttons: [
-            {
-                text: 'Cancel',
-                role: 'cancel'
-            },
-            {
-                text: 'Archive',
-                handler: async () => {
-                    await todoService.archiveCompletedTodos();
-                }
-            }
-        ]
-    });
-    await alert.present();
-};
+// (Archive Completed moved to Settings page)
 
 const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
     // Find actual list index and todo index for focus mode

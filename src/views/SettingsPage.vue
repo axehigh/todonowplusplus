@@ -44,6 +44,17 @@
         </ion-item>
       </ion-list>
 
+      <ion-list class="ion-margin-top">
+        <ion-item-divider>
+          <ion-label>Maintenance</ion-label>
+        </ion-item-divider>
+        <ion-item lines="none">
+          <ion-button expand="block" color="medium" @click="confirmArchive">
+            Archive Completed Tasks
+          </ion-button>
+        </ion-item>
+      </ion-list>
+
       <div class="ion-padding">
         <ion-button expand="block" @click="connect" :disabled="!clientId">Connect to Dropbox</ion-button>
         <ion-button expand="block" color="danger" @click="logout" v-if="isAuthenticated">Logout</ion-button>
@@ -61,9 +72,9 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, alertController } from '@ionic/vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
-import { dropboxService } from '../services';
+import { dropboxService, todoService } from '../services';
 import { gamificationService } from '../services';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -168,5 +179,23 @@ const connect = async () => {
 const logout = () => {
   dropboxService.logout();
   isAuthenticated.value = false;
+};
+
+const confirmArchive = async () => {
+  const alert = await alertController.create({
+    header: 'Archive Completed?',
+    message: 'This will move all completed todos to done.txt. This cannot be undone from the app.',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Archive',
+        role: 'confirm',
+        handler: async () => {
+          await todoService.archiveCompletedTodos();
+        }
+      }
+    ]
+  });
+  await alert.present();
 };
 </script>
