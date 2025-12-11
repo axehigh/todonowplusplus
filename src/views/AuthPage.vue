@@ -15,16 +15,13 @@ import { dropboxService } from '../services';
 
 const router = useRouter();
 
-onMounted(() => {
-  if (window.location.hash) {
-    const success = dropboxService.handleAuthCallback(window.location.hash);
-    if (success) {
-      router.replace('/home');
-    } else {
-      alert('Authentication failed');
-      router.replace('/settings');
-    }
+onMounted(async () => {
+  // Prefer full URL handler (supports PKCE code + legacy hash token)
+  const success = await dropboxService.handleAuthCallbackFromUrl(window.location.href);
+  if (success) {
+    router.replace('/home');
   } else {
+    alert('Authentication failed');
     router.replace('/settings');
   }
 });

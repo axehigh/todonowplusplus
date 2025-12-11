@@ -6,6 +6,9 @@ A simple todo app sync with a textfile in dropbox.
 
 <img width="394" height="249" alt="image" src="https://github.com/user-attachments/assets/89af28b6-c84d-4928-b7e2-42fa177355fb" />
 
+**Dropbox**
+https://www.dropbox.com/developers/apps
+
 **History**
 An idea I had many years ago was to wrap a todo mobile app 
 around a text file so that I could add todo on the move 

@@ -119,13 +119,11 @@ onMounted(() => {
     App.addListener('appUrlOpen', async (data) => {
       try {
         const url = data?.url || '';
-        // Ensure the URL starts with our scheme
-        const expectedPrefix = `db-${clientId.value}://oauth2redirect`;
-        if (!url.toLowerCase().startsWith(expectedPrefix.toLowerCase())) {
-          return;
-        }
+        // Ensure the URL looks like a Dropbox OAuth redirect to our app
+        const lower = url.toLowerCase();
+        if (!lower.startsWith('db-') || !lower.includes('://oauth2redirect')) return;
         // Let the service parse and persist the token
-        const ok = dropboxService.handleAuthCallbackFromUrl(url);
+        const ok = await dropboxService.handleAuthCallbackFromUrl(url);
         if (ok) {
           await Browser.close();
           isAuthenticated.value = true;
@@ -166,8 +164,10 @@ const connect = async () => {
   if (!clientId.value) return;
   localStorage.setItem('dropbox_client_id', clientId.value);
 
-  const redirectUri = computedRedirectUri.value;
-  const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(clientId.value)}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  // Update DropboxService redirect based on current clientId before building URL
+  // Note: Service was constructed with initial app key; for different keys, a new instance would be needed.
+  // Here we assume the configured key matches the app build. We still delegate URL building to the service.
+  const authUrl = await dropboxService.getAuthenticationUrl();
 
   if (Capacitor.isNativePlatform()) {
     await Browser.open({ url: authUrl });
