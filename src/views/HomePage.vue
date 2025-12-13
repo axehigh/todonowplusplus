@@ -248,40 +248,23 @@
 
           <ion-reorder-group :disabled="isFocusMode || isGlobalCategoryMode || !showCompleted || sortMode === 'priority'" @ionItemReorder="handleReorder($event)">
             <ion-item-sliding v-for="(todo, index) in filteredItems" :key="todo.raw">
-                <ion-item>
-                <ion-checkbox slot="start" :checked="todo.completed" @ionChange="toggleTodoItem(todo, index)" mode="ios"></ion-checkbox>
-                <ion-label :class="{ 'completed-item': todo.completed }" @click="presentEditTodoAlert(todo, index)">
-                    <h2>
-                        <ion-badge v-if="todo.priority" :color="getPriorityColor(todo.priority)" class="priority-badge">{{ todo.priority }}</ion-badge>
-                        <ion-badge v-if="todo.category" :color="getCategoryColor(todo.category)" class="category-badge">{{ todo.category }}</ion-badge>
-                        <ion-icon v-if="todo.category" :icon="getCategoryIcon(todo.category)" :color="getCategoryColor(todo.category)" size="small" class="category-icon"></ion-icon>
-                        {{ todo.text }}
-                    </h2>
-                    <p v-if="todo.dueDate || todo.timeSpent" class="due-date">
-                        <span v-if="todo.dueDate">
-                          <ion-icon :icon="calendarOutline" size="small"></ion-icon> {{ todo.dueDate }}
-                          <ion-text color="danger" v-if="todoService.isOverdue(todo.dueDate)" class="ion-margin-start">(Overdue)</ion-text>
-                          <ion-text color="warning" v-if="todoService.isDueToday(todo.dueDate)" class="ion-margin-start">(Today)</ion-text>
-                        </span>
-                        <span v-if="todo.timeSpent" class="time-spent">
-                          <ion-icon :icon="timeOutline" size="small"></ion-icon> {{ formatTimeSpent(todo.timeSpent) }}
-                        </span>
-                    </p>
-                </ion-label>
-                <ion-reorder slot="end"></ion-reorder>
-                </ion-item>
+                <TodoItemDisplay
+                  :todo="todo"
+                  @toggle="toggleTodoItem(todo, index)"
+                  @edit="presentEditTodoAlert(todo, index)"
+                />
                 <ion-item-options side="start">
-                <ion-item-option color="success" @click="toggleTodoItem(todo, index)">
-                    <ion-icon :icon="checkmarkDoneCircleOutline"></ion-icon>
-                </ion-item-option>
+                  <ion-item-option color="success" @click="toggleTodoItem(todo, index)">
+                      <ion-icon :icon="checkmarkDoneCircleOutline"></ion-icon>
+                  </ion-item-option>
                 </ion-item-options>
                 <ion-item-options side="end">
-                <ion-item-option color="tertiary" :disabled="lists.length <= 1" @click="presentMoveTodoAlert(todo, index)">
-                    <ion-icon :icon="swapVerticalOutline"></ion-icon>
-                </ion-item-option>
-                <ion-item-option color="danger" @click="deleteTodoItem(todo, index)">
-                    <ion-icon :icon="trashOutline"></ion-icon>
-                </ion-item-option>
+                  <ion-item-option color="tertiary" :disabled="lists.length <= 1" @click="presentMoveTodoAlert(todo, index)">
+                      <ion-icon :icon="swapVerticalOutline"></ion-icon>
+                  </ion-item-option>
+                  <ion-item-option color="danger" @click="deleteTodoItem(todo, index)">
+                      <ion-icon :icon="trashOutline"></ion-icon>
+                  </ion-item-option>
                 </ion-item-options>
             </ion-item-sliding>
           </ion-reorder-group>
@@ -313,6 +296,7 @@ import { ref, computed, nextTick } from 'vue';
 import { todoService, dropboxService, gamificationService } from '../services';
 import { TodoItem } from '../services/TodoService';
 import AddTodoModal from '../components/AddTodoModal.vue';
+import TodoItemDisplay from '../components/TodoItemDisplay.vue';
 
 const lists = todoService.lists;
 const selectedListIndex = ref(0);
@@ -911,37 +895,42 @@ const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
     color: var(--ion-color-medium);
 }
 
+.todo-title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.todo-meta {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.meta-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-text {
+  font-size: 0.8rem;
+}
+
+/* keep existing badge spacing but they now live on meta line */
 .priority-badge {
-    margin-right: 8px;
-    vertical-align: middle;
+  margin-right: 4px;
 }
 
 .category-badge {
-    margin-right: 8px;
-    vertical-align: middle;
-    font-size: 0.7em;
-}
-
-.due-date {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.8em;
-    color: var(--ion-color-medium);
-    margin-top: 4px;
-    flex-wrap: wrap;
+  margin-right: 4px;
 }
 
 .time-spent {
-    margin-left: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.quick-add-item {
-    --background: var(--ion-color-light);
-    margin-top: 8px;
+  margin-left: 0;
 }
 
 .category-icon {
