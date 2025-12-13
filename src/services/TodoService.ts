@@ -27,6 +27,8 @@ export class TodoService {
     public lists = ref<TodoList[]>([]);
     private readonly FILE_PATH = '/todo.txt';
     private gameTracker: GameTrackService | null = null;
+    public isSyncing = ref<boolean>(false);
+    public lastSyncTime = ref<string | null>(null);
 
     constructor(dropbox: DropboxService) {
         this.dropbox = dropbox;
@@ -43,6 +45,7 @@ export class TodoService {
             return;
         }
         try {
+            this.isSyncing.value = true;
             const content = await this.dropbox.readFile(this.FILE_PATH);
             const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
@@ -65,8 +68,11 @@ export class TodoService {
             }
 
             this.lists.value = newLists;
+            this.lastSyncTime.value = new Date().toISOString();
         } catch (error) {
             console.error('Error loading todos:', error);
+        } finally {
+            this.isSyncing.value = false;
         }
     }
 
@@ -283,17 +289,23 @@ export class TodoService {
     private async saveTodos() {
         if (!this.dropbox.isAuthenticated()) return;
 
-        let content = '';
+        try {
+            this.isSyncing.value = true;
+            let content = '';
 
-        for (const list of this.lists.value) {
-            content += `# ${list.name}\n`;
-            for (const item of list.items) {
-                content += this.reconstructTodoLine(item) + '\n';
+            for (const list of this.lists.value) {
+                content += `# ${list.name}\n`;
+                for (const item of list.items) {
+                    content += this.reconstructTodoLine(item) + '\n';
+                }
+                content += '\n';
             }
-            content += '\n';
-        }
 
-        await this.dropbox.writeFile(this.FILE_PATH, content.trim());
+            await this.dropbox.writeFile(this.FILE_PATH, content.trim());
+            this.lastSyncTime.value = new Date().toISOString();
+        } finally {
+            this.isSyncing.value = false;
+        }
     }
 
     private reconstructTodoLine(item: TodoItem): string {

@@ -10,12 +10,21 @@
     </ion-header>
 
     <ion-content class="ion-padding">
+      <ion-searchbar v-model="searchText" placeholder="Search settings..." @ionInput="handleSearch"></ion-searchbar>
+
       <ion-list>
-        <ion-item>
+        <ion-item v-if="isAuthenticated">
+          <ion-label>
+            <span v-if="isSyncing">🔄 Syncing...</span>
+            <span v-else-if="lastSyncTime">☁️ Last synced: {{ formatSyncTime(lastSyncTime) }}</span>
+            <span v-else>☁️ Not synced yet</span>
+          </ion-label>
+        </ion-item>
+        <ion-item v-if="!searchText || 'dropbox app key'.includes(searchText.toLowerCase())">
           <ion-label position="stacked">Dropbox App Key</ion-label>
           <ion-input v-model="clientId" placeholder="Enter your App Key"></ion-input>
         </ion-item>
-        <ion-item>
+        <ion-item v-if="!searchText || 'theme'.includes(searchText.toLowerCase())">
           <ion-label>Theme</ion-label>
           <ion-select interface="popover" :value="themeMode" @ionChange="changeTheme($event)" placeholder="Follow System">
             <ion-select-option value="system">System</ion-select-option>
@@ -23,18 +32,18 @@
             <ion-select-option value="dark">Dark</ion-select-option>
           </ion-select>
         </ion-item>
-        <ion-item-divider>
+        <ion-item-divider v-if="!searchText || 'fun gamification'.includes(searchText.toLowerCase())">
           <ion-label>Fun & Gamification</ion-label>
         </ion-item-divider>
-        <ion-item>
+        <ion-item v-if="!searchText || 'fun mode'.includes(searchText.toLowerCase())">
           <ion-label>Fun Mode</ion-label>
           <ion-toggle slot="end" :checked="funMode" @ionChange="toggleFunMode"></ion-toggle>
         </ion-item>
-        <ion-item>
+        <ion-item v-if="!searchText || 'sound effects'.includes(searchText.toLowerCase())">
           <ion-label>Sound Effects</ion-label>
           <ion-toggle slot="end" :checked="sound" @ionChange="toggleSound"></ion-toggle>
         </ion-item>
-        <ion-item>
+        <ion-item v-if="!searchText || 'reduced motion'.includes(searchText.toLowerCase())">
           <ion-label>Reduced Motion</ion-label>
           <ion-select interface="popover" :value="reducedMotionSetting" @ionChange="changeReducedMotion($event)" placeholder="Follow System">
             <ion-select-option value="system">Follow System</ion-select-option>
@@ -44,7 +53,7 @@
         </ion-item>
       </ion-list>
 
-      <ion-list class="ion-margin-top">
+      <ion-list class="ion-margin-top" v-if="!searchText || 'maintenance archive'.includes(searchText.toLowerCase())">
         <ion-item-divider>
           <ion-label>Maintenance</ion-label>
         </ion-item-divider>
@@ -55,7 +64,7 @@
         </ion-item>
       </ion-list>
 
-      <div class="ion-padding">
+      <div class="ion-padding" v-if="!searchText || 'connect dropbox logout'.includes(searchText.toLowerCase())">
         <ion-button expand="block" @click="connect" :disabled="!clientId">Connect to Dropbox</ion-button>
         <ion-button expand="block" color="danger" @click="logout" v-if="isAuthenticated">Logout</ion-button>
       </div>
@@ -72,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, alertController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, IonSearchbar, alertController } from '@ionic/vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { dropboxService, todoService } from '../services';
 import { gamificationService } from '../services';
@@ -84,6 +93,7 @@ import { getTheme, setTheme } from '../theme/theme';
 
 const clientId = ref('');
 const isAuthenticated = ref(false);
+const searchText = ref('');
 const themeMode = ref<'system' | 'light' | 'dark'>('system');
 const funMode = computed(() => gamificationService.funMode.value);
 const sound = computed(() => gamificationService.sound.value);
@@ -92,6 +102,8 @@ const reducedMotionSetting = computed(() => {
   if (override === null) return 'system';
   return override ? 'on' : 'off';
 });
+const isSyncing = computed(() => todoService.isSyncing.value);
+const lastSyncTime = computed(() => todoService.lastSyncTime.value);
 
 // Compute redirect based on platform and current App Key
 const computedRedirectUri = computed(() => {
@@ -179,6 +191,18 @@ const connect = async () => {
 const logout = () => {
   dropboxService.logout();
   isAuthenticated.value = false;
+};
+
+const formatSyncTime = (isoString: string | null): string => {
+  if (!isoString) return 'Never';
+  const date = new Date(isoString);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+const handleSearch = (event: any) => {
+  searchText.value = event.detail.value || '';
 };
 
 const confirmArchive = async () => {

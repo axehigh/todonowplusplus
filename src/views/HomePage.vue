@@ -104,14 +104,36 @@
           </ion-buttons>
           <ion-title>{{ pageTitle }}</ion-title>
           <ion-buttons slot="end">
-            <ion-badge v-if="isAuthenticated && funMode" color="tertiary" class="header-badge" aria-label="Streak">
-              <ion-icon :icon="flameOutline" class="badge-icon"></ion-icon>
-              {{ streak }}
-            </ion-badge>
-            <ion-badge v-if="isAuthenticated && funMode" color="secondary" class="header-badge" aria-label="Points">
-              <ion-icon :icon="starOutline" class="badge-icon"></ion-icon>
-              {{ points }}
-            </ion-badge>
+            <!-- Simple search input -->
+            <ion-item class="search-item" lines="none">
+              <ion-input
+                v-model="searchText"
+                placeholder="Search tasks..."
+                clear-input
+              ></ion-input>
+            </ion-item>
+            <span v-if="isAuthenticated && funMode" class="ag-tooltip" data-label="Daily streak">
+              <ion-badge
+                id="btnStreakInfo"
+                color="tertiary"
+                class="header-badge"
+                aria-label="Streak, tap for info"
+              >
+                <ion-icon :icon="flameOutline" class="badge-icon"></ion-icon>
+                {{ streak }}
+              </ion-badge>
+            </span>
+            <span v-if="isAuthenticated && funMode" class="ag-tooltip" data-label="Points">
+              <ion-badge
+                id="btnPointsInfo"
+                color="secondary"
+                class="header-badge"
+                aria-label="Points, tap for info"
+              >
+                <ion-icon :icon="starOutline" class="badge-icon"></ion-icon>
+                {{ points }}
+              </ion-badge>
+            </span>
             <span class="ag-tooltip" :data-label="showCompleted ? 'Hide Completed' : 'Show Completed'">
               <ion-button id="btnToggleCompleted" @click="showCompleted = !showCompleted" :aria-label="showCompleted ? 'Hide Completed' : 'Show Completed'">
                   <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
@@ -139,6 +161,41 @@
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
+
+      <!-- Gamification info popovers -->
+      <ion-popover
+        v-if="isAuthenticated && funMode"
+        trigger="btnStreakInfo"
+        trigger-action="click"
+      >
+        <ion-content class="ion-padding">
+          <ion-text>
+            <h3>Streak</h3>
+            <p>
+              Your streak is the number of consecutive days you've completed at least one task.
+              Keep going to build a longer streak!
+            </p>
+            <p><strong>Current streak:</strong> {{ streak }} day<span v-if="streak !== 1">s</span></p>
+          </ion-text>
+        </ion-content>
+      </ion-popover>
+
+      <ion-popover
+        v-if="isAuthenticated && funMode"
+        trigger="btnPointsInfo"
+        trigger-action="click"
+      >
+        <ion-content class="ion-padding">
+          <ion-text>
+            <h3>Points</h3>
+            <p>
+              You earn points by completing tasks. Each completion gives points, with
+              small bonuses for staying productive.
+            </p>
+            <p><strong>Total points:</strong> {{ points }}</p>
+          </ion-text>
+        </ion-content>
+      </ion-popover>
 
       <ion-content :fullscreen="true" class="ion-padding-top">
         <!-- Global loading indicator for Dropbox sync (non-refresher) -->
@@ -250,7 +307,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonLoading } from '@ionic/vue';
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonLoading, IonPopover } from '@ionic/vue';
 import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
 import { ref, computed, nextTick } from 'vue';
 import { todoService, dropboxService, gamificationService } from '../services';
@@ -264,6 +321,7 @@ const isGlobalCategoryMode = ref(false);
 const isAuthenticated = ref(false);
 const showCompleted = ref(true);
 const quickAddText = ref('');
+const searchText = ref('');
 const categoryFilter = ref<'All' | 'Reminder' | 'Do' | 'Long Task'>('All');
 const sortMode = ref<'manual' | 'priority'>('manual');
 const isLoading = ref(false);
@@ -321,6 +379,12 @@ const filteredItems = computed(() => {
         items = items.filter(item => !item.completed);
     }
 
+    // Simple text search by task text
+    if (searchText.value.trim()) {
+        const q = searchText.value.trim().toLowerCase();
+        items = items.filter(item => item.text.toLowerCase().includes(q));
+    }
+
     // Apply sorting by priority if enabled (stable sort)
     if (sortMode.value === 'priority') {
         const rank = (p?: string) => {
@@ -350,19 +414,21 @@ const selectList = (index: number) => {
     selectedListIndex.value = index;
     isFocusMode.value = false;
     isGlobalCategoryMode.value = false;
-    // Reset category filter so future Global mode starts clean
     categoryFilter.value = 'All';
+    searchText.value = '';
 };
 
 const selectFocusMode = () => {
     isFocusMode.value = true;
     isGlobalCategoryMode.value = false;
+    searchText.value = '';
 };
 
 const selectGlobalCategory = (category: 'All' | 'Reminder' | 'Do' | 'Long Task') => {
     categoryFilter.value = category;
     isGlobalCategoryMode.value = true;
     isFocusMode.value = false;
+    searchText.value = '';
 };
 
 const toggleSortMode = () => {
@@ -584,29 +650,26 @@ const presentAddListAlert = async () => {
 
   await alert.present();
 
-  // Focus the input and enable Enter to submit
-  const inputEl = alert.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+  // Focus the input for convenience
+  const inputEl = alert.querySelector('input') as HTMLInputElement | null;
   inputEl?.focus();
-  const onKey = async (ev: KeyboardEvent) => {
-    if (ev.key === 'Enter') {
-      ev.preventDefault();
-      const name = (inputEl?.value || '').trim();
-      await alert.dismiss({ name }, 'confirm');
-    }
-  };
-  alert.addEventListener('keydown', onKey);
 
   const { role, data } = await alert.onWillDismiss();
-  alert.removeEventListener('keydown', onKey);
-  if (role === 'confirm') {
-    const name = (data?.name || '').trim();
-    if (name) {
-      todoService.addList(name);
-      // Switch to the new list (it will be at the end)
-      setTimeout(() => {
-        selectedListIndex.value = lists.value.length - 1;
-      }, 100);
-    }
+
+  // On web, Ionic v6+ returns the form values under data.values
+  const rawName = (data && (data.values?.name ?? data.name)) as string | undefined;
+  const name = (rawName || '').trim();
+  console.log('Confirm adding list', name, 'role:', role, 'data:', data);
+
+  if (!name || role !== 'confirm') {
+    return;
+  }
+
+  try {
+    await todoService.addList(name);
+    selectedListIndex.value = lists.value.length - 1;
+  } catch (e) {
+    console.error('Failed to add list', e);
   }
 };
 
@@ -933,5 +996,11 @@ const presentEditTodoAlert = async (todo: TodoItem, index: number) => {
 @keyframes confetti-pop {
   0% { opacity: 1; transform: translate(0,0) rotate(0deg); }
   100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -120px)) rotate(360deg); }
+}
+
+.search-item {
+  --background: transparent;
+  --inner-padding-end: 8px;
+  max-width: 180px;
 }
 </style>
