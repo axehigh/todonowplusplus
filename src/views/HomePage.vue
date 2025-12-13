@@ -1,100 +1,17 @@
 <template>
   <ion-page>
-    <ion-menu content-id="main-content">
-      <ion-header>
-        <ion-toolbar color="primary">
-          <ion-title>Lists</ion-title>
-          <ion-buttons slot="end">
-             <ion-button @click="presentAddListAlert">
-                <ion-icon :icon="addCircleOutline"></ion-icon>
-             </ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
-      <ion-content>
-        <ion-list lines="none">
-           <ion-menu-toggle :auto-hide="false">
-             <ion-item button @click="selectFocusMode" :color="isFocusMode ? 'secondary' : ''" :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="flashOutline"></ion-icon>
-               <ion-label>Focus</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-
-           <ion-item-divider>
-             <ion-label>Filters</ion-label>
-           </ion-item-divider>
-
-           <!-- Global Category Filters -->
-           <ion-menu-toggle :auto-hide="false">
-             <ion-item button @click="selectGlobalCategory('All')"
-                       :color="isGlobalCategoryMode && categoryFilter === 'All' ? 'secondary' : ''"
-                       :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="listOutline"></ion-icon>
-               <ion-label>All Tasks</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-           <ion-menu-toggle :auto-hide="false">
-             <ion-item button @click="selectGlobalCategory('Reminder')"
-                       :color="isGlobalCategoryMode && categoryFilter === 'Reminder' ? 'secondary' : ''"
-                       :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="alarmOutline"></ion-icon>
-               <ion-label>Reminder</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-           <ion-menu-toggle :auto-hide="false">
-             <ion-item button @click="selectGlobalCategory('Do')"
-                       :color="isGlobalCategoryMode && categoryFilter === 'Do' ? 'secondary' : ''"
-                       :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="checkmarkDoneOutline"></ion-icon>
-               <ion-label>Do</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-           <ion-menu-toggle :auto-hide="false">
-             <ion-item button @click="selectGlobalCategory('Long Task')"
-                       :color="isGlobalCategoryMode && categoryFilter === 'Long Task' ? 'secondary' : ''"
-                       :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="timeOutline"></ion-icon>
-               <ion-label>Long Task</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-
-           <ion-item-divider>
-             <ion-label>Lists</ion-label>
-           </ion-item-divider>
-
-           <ion-menu-toggle :auto-hide="false" v-for="(list, index) in lists" :key="index">
-            <ion-item button @click="selectList(index)" :color="!isFocusMode && !isGlobalCategoryMode && selectedListIndex === index ? 'secondary' : ''" :detail="false" class="list-item">
-              <ion-icon slot="start" :icon="listOutline"></ion-icon>
-              <ion-label>{{ list.name }}</ion-label>
-              <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">{{ list.items.length }}</ion-badge>
-            </ion-item>
-           </ion-menu-toggle>
-            <ion-item v-if="lists.length === 0">
-             <ion-label color="medium" class="ion-text-center">No lists</ion-label>
-           </ion-item>
-
-           <ion-item-divider class="ion-margin-top">
-             <ion-label>Archive</ion-label>
-           </ion-item-divider>
-           <ion-menu-toggle :auto-hide="true" v-if="isAuthenticated">
-             <ion-item button router-link="/done" :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="checkmarkDoneOutline"></ion-icon>
-               <ion-label>Done</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-
-           <ion-item-divider class="ion-margin-top">
-             <ion-label>Settings</ion-label>
-           </ion-item-divider>
-           <ion-menu-toggle :auto-hide="true">
-             <ion-item button router-link="/settings" :detail="false" class="list-item">
-               <ion-icon slot="start" :icon="settingsOutline"></ion-icon>
-               <ion-label>Settings</ion-label>
-             </ion-item>
-           </ion-menu-toggle>
-         </ion-list>
-      </ion-content>
-    </ion-menu>
+    <SideMenu
+      :lists="lists"
+      :selected-list-index="selectedListIndex"
+      :is-focus-mode="isFocusMode"
+      :is-global-category-mode="isGlobalCategoryMode"
+      :category-filter="categoryFilter"
+      :is-authenticated="isAuthenticated"
+      @add-list="presentAddListAlert"
+      @select-focus-mode="selectFocusMode"
+      @select-global-category="selectGlobalCategory"
+      @select-list="selectList"
+    />
 
     <div class="ion-page" id="main-content">
       <MainToolbar
@@ -116,44 +33,20 @@
         @delete-list="presentDeleteListAlert"
       />
 
-      <!-- Gamification info popovers -->
-      <ion-popover
-        v-if="isAuthenticated && funMode"
-        trigger="btnStreakInfo"
-        trigger-action="click"
-      >
-        <ion-content class="ion-padding">
-          <ion-text>
-            <h3>Streak</h3>
-            <p>
-              Your streak is the number of consecutive days you've completed at least one task.
-              Keep going to build a longer streak!
-            </p>
-            <p><strong>Current streak:</strong> {{ streak }} day<span v-if="streak !== 1">s</span></p>
-          </ion-text>
-        </ion-content>
-      </ion-popover>
-
-      <ion-popover
-        v-if="isAuthenticated && funMode"
-        trigger="btnPointsInfo"
-        trigger-action="click"
-      >
-        <ion-content class="ion-padding">
-          <ion-text>
-            <h3>Points</h3>
-            <p>
-              You earn points by completing tasks. Each completion gives points, with
-              small bonuses for staying productive.
-            </p>
-            <p><strong>Total points:</strong> {{ points }}</p>
-          </ion-text>
-        </ion-content>
-      </ion-popover>
+      <GamificationPopovers
+        :is-authenticated="isAuthenticated"
+        :fun-mode="funMode"
+        :streak="streak"
+        :points="points"
+      />
 
       <ion-content :fullscreen="true" class="ion-padding-top">
         <!-- Global loading indicator for Dropbox sync (non-refresher) -->
-        <ion-loading :is-open="isLoading" message="Syncing with Dropbox..." spinner="crescent"></ion-loading>
+        <ion-loading
+          :is-open="isLoading"
+          message="Syncing with Dropbox..."
+          spinner="crescent"
+        ></ion-loading>
 
         <ion-header collapse="condense">
           <ion-toolbar>
@@ -165,75 +58,39 @@
           <ion-refresher-content></ion-refresher-content>
         </ion-refresher>
 
-        <div class="ion-padding" v-if="!isAuthenticated">
-          <ion-card class="welcome-card">
-            <ion-card-header>
-              <ion-card-title>Welcome to Todo App</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <p>Please connect to Dropbox in Settings to manage your todos.</p>
-              <ion-button expand="block" router-link="/settings" class="ion-margin-top" color="secondary">Go to Settings</ion-button>
-            </ion-card-content>
-          </ion-card>
-        </div>
+        <WelcomeCard v-if="!isAuthenticated" />
 
-        <div v-else-if="lists.length === 0" class="ion-padding ion-text-center empty-state">
-           <ion-icon :icon="documentsOutline" size="large" color="medium"></ion-icon>
-           <ion-text color="medium">
-            <h3>No lists found</h3>
-            <p>Open the menu to create one!</p>
-          </ion-text>
-          <ion-button @click="presentAddListAlert" color="tertiary">Create List</ion-button>
-        </div>
+        <EmptyListsState
+          v-else-if="lists.length === 0"
+          @create-list="presentAddListAlert"
+        />
 
-        <ion-list v-else-if="currentList || isFocusMode || isGlobalCategoryMode" lines="full" class="todo-list">
-          <!-- Inline Quick Add Input moved to the top of the list -->
-          <ion-item v-if="!isFocusMode && !isGlobalCategoryMode" class="quick-add-item">
-            <ion-input
-              v-model="quickAddText"
-              placeholder="Add a task..."
-              @keyup.enter="quickAddTodo"
-              :clear-input="true"
-            ></ion-input>
-            <ion-button slot="end" fill="clear" @click="quickAddTodo" :disabled="!quickAddText">
-              <ion-icon :icon="addCircleOutline"></ion-icon>
-            </ion-button>
-          </ion-item>
+        <TodoListView
+          v-else-if="currentList || isFocusMode || isGlobalCategoryMode"
+          :items="filteredItems"
+          :lists-count="lists.length"
+          :is-focus-mode="isFocusMode"
+          :is-global-category-mode="isGlobalCategoryMode"
+          :show-completed="showCompleted"
+          :sort-mode="sortMode"
+          :quick-add-enabled="!isFocusMode && !isGlobalCategoryMode"
+          :quick-add-text="quickAddText"
+          :has-list="!!currentList || isFocusMode || isGlobalCategoryMode"
+          @update:quickAddText="val => (quickAddText = val)"
+          @quick-add="quickAddTodo"
+          @toggle-todo="({ todo, index }) => toggleTodoItem(todo, index)"
+          @edit-todo="({ todo, index }) => presentEditTodoAlert(todo, index)"
+          @move-todo="({ todo, index }) => presentMoveTodoAlert(todo, index)"
+          @delete-todo="({ todo, index }) => deleteTodoItem(todo, index)"
+          @reorder="({ from, to }) => handleReorder({ detail: { from, to, complete: () => {} } } as any)"
+        />
 
-          <ion-reorder-group :disabled="isFocusMode || isGlobalCategoryMode || !showCompleted || sortMode === 'priority'" @ionItemReorder="handleReorder($event)">
-            <ion-item-sliding v-for="(todo, index) in filteredItems" :key="todo.raw">
-                <TodoItemDisplay
-                  :todo="todo"
-                  @toggle="toggleTodoItem(todo, index)"
-                  @edit="presentEditTodoAlert(todo, index)"
-                />
-                <ion-item-options side="start">
-                  <ion-item-option color="success" @click="toggleTodoItem(todo, index)">
-                      <ion-icon :icon="checkmarkDoneCircleOutline"></ion-icon>
-                  </ion-item-option>
-                </ion-item-options>
-                <ion-item-options side="end">
-                  <ion-item-option color="tertiary" :disabled="lists.length <= 1" @click="presentMoveTodoAlert(todo, index)">
-                      <ion-icon :icon="swapVerticalOutline"></ion-icon>
-                  </ion-item-option>
-                  <ion-item-option color="danger" @click="deleteTodoItem(todo, index)">
-                      <ion-icon :icon="trashOutline"></ion-icon>
-                  </ion-item-option>
-                </ion-item-options>
-            </ion-item-sliding>
-          </ion-reorder-group>
-
-          <div v-if="filteredItems.length === 0" class="ion-padding ion-text-center empty-state">
-              <ion-icon :icon="checkmarkDoneCircleOutline" size="large" color="success"></ion-icon>
-              <ion-text color="medium">
-                <p v-if="isFocusMode">No urgent tasks!</p>
-                <p v-else>All caught up!</p>
-              </ion-text>
-          </div>
-
-        </ion-list>
-
-        <ion-fab vertical="bottom" horizontal="end" slot="fixed" v-if="isAuthenticated && lists.length > 0 && !isFocusMode && !isGlobalCategoryMode">
+        <ion-fab
+          vertical="bottom"
+          horizontal="end"
+          slot="fixed"
+          v-if="isAuthenticated && lists.length > 0 && !isFocusMode && !isGlobalCategoryMode"
+        >
           <ion-fab-button @click="presentAlert" class="gradient-fab">
             <ion-icon :icon="add"></ion-icon>
           </ion-fab-button>
@@ -244,14 +101,33 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonCheckbox, IonFab, IonFabButton, IonRefresher, IonRefresherContent, IonText, IonMenu, IonMenuButton, IonMenuToggle, IonBadge, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonItemSliding, IonItemOptions, IonItemOption, alertController, onIonViewWillEnter, IonReorderGroup, IonReorder, modalController, IonItemDivider, IonInput, IonLoading, IonPopover } from '@ionic/vue';
-import { settingsOutline, add, listOutline, addCircleOutline, documentsOutline, checkmarkDoneCircleOutline, trashOutline, calendarOutline, eyeOutline, eyeOffOutline, flashOutline, timeOutline, createOutline, alarmOutline, checkmarkDoneOutline, swapVerticalOutline, flameOutline, starOutline } from 'ionicons/icons';
-import { ref, computed, nextTick } from 'vue';
-import { todoService, dropboxService, gamificationService } from '../services';
-import { TodoItem } from '../services/TodoService';
+import {
+  alertController,
+  IonContent,
+  IonFab,
+  IonFabButton,
+  IonHeader,
+  IonIcon,
+  IonLoading,
+  IonPage,
+  IonRefresher,
+  IonRefresherContent,
+  IonTitle,
+  IonToolbar,
+  modalController,
+  onIonViewWillEnter
+} from '@ionic/vue';
+import {add} from 'ionicons/icons';
+import {computed, nextTick, ref} from 'vue';
+import {dropboxService, gamificationService, todoService} from '../services';
+import {TodoItem} from '../services/TodoService';
 import AddTodoModal from '../components/AddTodoModal.vue';
-import TodoItemDisplay from '../components/TodoItemDisplay.vue';
 import MainToolbar from '../components/MainToolbar.vue';
+import SideMenu from '../components/SideMenu.vue';
+import GamificationPopovers from '../components/GamificationPopovers.vue';
+import WelcomeCard from '../components/WelcomeCard.vue';
+import EmptyListsState from '../components/EmptyListsState.vue';
+import TodoListView from '../components/TodoListView.vue';
 
 const lists = todoService.lists;
 const selectedListIndex = ref(0);
