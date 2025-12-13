@@ -650,30 +650,21 @@ const presentAddListAlert = async () => {
 
   await alert.present();
 
-  // Focus the input for convenience
   const inputEl = alert.querySelector('input') as HTMLInputElement | null;
   inputEl?.focus();
 
   const { role, data } = await alert.onWillDismiss();
 
-  // On web, Ionic v6+ returns the form values under data.values
   const rawName = (data && (data.values?.name ?? data.name)) as string | undefined;
   const name = (rawName || '').trim();
   console.log('Confirm adding list', name, 'role:', role, 'data:', data);
 
-  if (!name || role !== 'confirm') {
-    return;
-  }
+  if (!name || role !== 'confirm') return;
 
-  try {
-    await todoService.addList(name);
-    selectedListIndex.value = lists.value.length - 1;
-  } catch (e) {
-    console.error('Failed to add list', e);
-  }
+  await todoService.addList(name);
+  selectedListIndex.value = lists.value.length - 1;
 };
 
-// Present a picker to move a todo to another list
 const presentMoveTodoAlert = async (todo: TodoItem, index: number) => {
   // Determine actual source list/index depending on mode
   let sourceListIndex = selectedListIndex.value;
@@ -751,26 +742,18 @@ const presentRenameListAlert = async () => {
 
   await alert.present();
 
-  // Focus and Enter key to confirm
-  const inputEl = alert.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+  const inputEl = alert.querySelector('input') as HTMLInputElement | null;
   inputEl?.focus();
-  const onKey = async (ev: KeyboardEvent) => {
-    if (ev.key === 'Enter') {
-      ev.preventDefault();
-      const name = (inputEl?.value || '').trim();
-      await alert.dismiss({ name }, 'confirm');
-    }
-  };
-  alert.addEventListener('keydown', onKey);
 
   const { role, data } = await alert.onWillDismiss();
-  alert.removeEventListener('keydown', onKey);
-  if (role === 'confirm') {
-    const name = (data?.name || '').trim();
-    if (name && name !== currentList.value?.name) {
-      await todoService.renameList(selectedListIndex.value, name);
-    }
-  }
+
+  const rawName = (data && (data.values?.name ?? data.name)) as string | undefined;
+  const name = (rawName || '').trim();
+  console.log('Confirm renaming list', name, 'role:', role, 'data:', data);
+
+  if (!name || role !== 'confirm' || name === currentList.value?.name) return;
+
+  await todoService.renameList(selectedListIndex.value, name);
 };
 
 const presentDeleteListAlert = async () => {
