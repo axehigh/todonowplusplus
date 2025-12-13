@@ -97,70 +97,24 @@
     </ion-menu>
 
     <div class="ion-page" id="main-content">
-      <ion-header :translucent="true">
-        <ion-toolbar class="gradient-toolbar">
-          <ion-buttons slot="start">
-              <ion-menu-button id="btnOpenMenu" color="light" aria-label="Open Menu"></ion-menu-button>
-          </ion-buttons>
-          <ion-title>{{ pageTitle }}</ion-title>
-          <ion-buttons slot="end">
-            <!-- Simple search input -->
-            <ion-item class="search-item" lines="none">
-              <ion-input
-                v-model="searchText"
-                placeholder="Search tasks..."
-                clear-input
-              ></ion-input>
-            </ion-item>
-            <span v-if="isAuthenticated && funMode" class="ag-tooltip" data-label="Daily streak">
-              <ion-badge
-                id="btnStreakInfo"
-                color="tertiary"
-                class="header-badge"
-                aria-label="Streak, tap for info"
-              >
-                <ion-icon :icon="flameOutline" class="badge-icon"></ion-icon>
-                {{ streak }}
-              </ion-badge>
-            </span>
-            <span v-if="isAuthenticated && funMode" class="ag-tooltip" data-label="Points">
-              <ion-badge
-                id="btnPointsInfo"
-                color="secondary"
-                class="header-badge"
-                aria-label="Points, tap for info"
-              >
-                <ion-icon :icon="starOutline" class="badge-icon"></ion-icon>
-                {{ points }}
-              </ion-badge>
-            </span>
-            <span class="ag-tooltip" :data-label="showCompleted ? 'Hide Completed' : 'Show Completed'">
-              <ion-button id="btnToggleCompleted" @click="showCompleted = !showCompleted" :aria-label="showCompleted ? 'Hide Completed' : 'Show Completed'">
-                  <ion-icon :icon="showCompleted ? eyeOutline : eyeOffOutline"></ion-icon>
-              </ion-button>
-            </span>
-
-            <span class="ag-tooltip" v-if="isAuthenticated && (currentList || isFocusMode || isGlobalCategoryMode)" :data-label="sortMode === 'priority' ? 'Switch to Manual Sort' : 'Switch to Priority Sort'">
-              <ion-button id="btnSort" @click="toggleSortMode" :color="sortMode === 'priority' ? 'light' : 'light'" :aria-label="sortMode === 'priority' ? 'Switch to Manual Sort' : 'Switch to Priority Sort'">
-                  <ion-icon :icon="swapVerticalOutline"></ion-icon>
-              </ion-button>
-            </span>
-
-            <span class="ag-tooltip" v-if="isAuthenticated && !isFocusMode && currentList" :data-label="'Rename List'">
-              <ion-button id="btnRenameList" @click="presentRenameListAlert" color="light" aria-label="Rename List">
-                  <ion-icon :icon="createOutline"></ion-icon>
-              </ion-button>
-            </span>
-
-            <span class="ag-tooltip" v-if="isAuthenticated && !isFocusMode && currentList" :data-label="'Delete List'">
-              <ion-button id="btnDeleteList" @click="presentDeleteListAlert" color="light" aria-label="Delete List">
-                  <ion-icon :icon="trashOutline"></ion-icon>
-              </ion-button>
-            </span>
-
-          </ion-buttons>
-        </ion-toolbar>
-      </ion-header>
+      <MainToolbar
+        :page-title="pageTitle"
+        :is-authenticated="isAuthenticated"
+        :fun-mode="funMode"
+        :streak="streak"
+        :points="points"
+        :show-completed="showCompleted"
+        :sort-mode="sortMode"
+        :has-current-list="!!currentList"
+        :is-focus-mode="isFocusMode"
+        :is-global-category-mode="isGlobalCategoryMode"
+        :search-text="searchText"
+        @update:searchText="val => (searchText = val)"
+        @update:showCompleted="val => (showCompleted = val)"
+        @toggle-sort-mode="toggleSortMode"
+        @rename-list="presentRenameListAlert"
+        @delete-list="presentDeleteListAlert"
+      />
 
       <!-- Gamification info popovers -->
       <ion-popover
@@ -297,6 +251,7 @@ import { todoService, dropboxService, gamificationService } from '../services';
 import { TodoItem } from '../services/TodoService';
 import AddTodoModal from '../components/AddTodoModal.vue';
 import TodoItemDisplay from '../components/TodoItemDisplay.vue';
+import MainToolbar from '../components/MainToolbar.vue';
 
 const lists = todoService.lists;
 const selectedListIndex = ref(0);
@@ -523,41 +478,6 @@ const deleteTodoItem = async (todo: TodoItem, index: number) => {
     } else {
         await todoService.removeTodo(selectedListIndex.value, index);
     }
-};
-
-const getPriorityColor = (priority: string) => {
-    switch (priority) {
-        case 'A': return 'danger';
-        case 'B': return 'warning';
-        case 'C': return 'success';
-        case 'D': return 'medium';
-        default: return 'light';
-    }
-};
-
-const getCategoryColor = (category: string) => {
-    switch (category) {
-        case 'Reminder': return 'tertiary';
-        case 'Do': return 'primary';
-        case 'Long Task': return 'secondary';
-        default: return 'medium';
-    }
-};
-
-const getCategoryIcon = (category: string) => {
-    switch (category) {
-        case 'Reminder': return alarmOutline;
-        case 'Do': return checkmarkDoneOutline;
-        case 'Long Task': return timeOutline;
-        default: return undefined as any;
-    }
-};
-
-const formatTimeSpent = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
 const handleReorder = async (event: CustomEvent) => {
