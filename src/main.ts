@@ -32,6 +32,7 @@ import '@ionic/vue/css/palettes/dark.class.css';
 import './theme/variables.css';
 /* Visual polish enhancements */
 import './theme/enhancements.css';
+import './theme/effects.css';
 
 // Initialize persisted auth before mounting the app
 import { dropboxService } from './services';

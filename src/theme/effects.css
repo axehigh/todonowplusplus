@@ -1,0 +1,20 @@
+/* Confetti */
+.confetti-burst {
+    position: absolute;
+    top: 64px;
+    right: 16px;
+    pointer-events: none;
+}
+.confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    animation: confetti-pop 1s ease-out forwards;
+    transform: translate3d(0,0,0) rotate(calc(var(--rx) * 1deg));
+    animation-delay: var(--delay, 0s);
+}
+@keyframes confetti-pop {
+    0% { opacity: 1; transform: translate(0,0) rotate(0deg); }
+    100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -120px)) rotate(360deg); }
+}
