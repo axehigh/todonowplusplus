@@ -17,11 +17,7 @@
             :color="getPriorityColor(todo.priority)"
             class="priority-badge"
           >{{ todo.priority }}</ion-badge>
-          <ion-badge
-            v-if="todo.category"
-            :color="getCategoryColor(todo.category)"
-            class="category-badge"
-          >{{ todo.category }}</ion-badge>
+          <!-- Category: icon only in the list -->
           <ion-icon
             v-if="todo.category"
             :icon="getCategoryIcon(todo.category)"
@@ -111,11 +107,11 @@ const getCategoryColor = (category?: string) => {
 const getCategoryIcon = (category?: string) => {
   switch (category) {
     case 'Reminder':
-      return calendarOutline;
+      return calendarOutline; // same icon as used in the Category select for Reminder
     case 'Do':
-      return checkmarkDoneOutline;
+      return checkmarkDoneOutline; // same icon as used in the Category select for Do
     case 'Long Task':
-      return timeOutline;
+      return timeOutline; // same icon as used in the Category select for Long Task
     default:
       return undefined as any;
   }

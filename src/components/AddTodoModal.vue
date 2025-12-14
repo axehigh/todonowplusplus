@@ -37,9 +37,15 @@
       <ion-label>Category</ion-label>
       <ion-select v-model="category" interface="popover">
         <ion-select-option value="">None</ion-select-option>
-        <ion-select-option value="Reminder">Reminder</ion-select-option>
-        <ion-select-option value="Do">Do</ion-select-option>
-        <ion-select-option value="Long Task">Long Task</ion-select-option>
+        <ion-select-option value="Do">
+          Do
+        </ion-select-option>
+        <ion-select-option value="Long Task">
+          Long Task
+        </ion-select-option>
+        <ion-select-option value="Reminder">
+          Reminder
+        </ion-select-option>
       </ion-select>
     </ion-item>
 
@@ -156,3 +162,7 @@ const onDateChange = () => {
     // Optional: handle date change if needed, but v-model handles it
 };
 </script>
+
+<style scoped>
+/* Removed category-option* styles since we no longer render a custom layout inside ion-select-option */
+</style>
