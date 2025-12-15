@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, IonSearchbar, alertController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, IonSearchbar, alertController, loadingController } from '@ionic/vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { dropboxService, todoService } from '../services';
 import { gamificationService } from '../services';
@@ -215,7 +215,16 @@ const confirmArchive = async () => {
         text: 'Archive',
         role: 'confirm',
         handler: async () => {
-          await todoService.archiveCompletedTodos();
+          const loading = await loadingController.create({
+            message: 'Archiving completed tasks…',
+            spinner: 'crescent',
+          });
+          await loading.present();
+          try {
+            await todoService.archiveCompletedTodos();
+          } finally {
+            await loading.dismiss();
+          }
         }
       }
     ]

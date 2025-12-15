@@ -6,14 +6,18 @@
       </ion-buttons>
       <ion-title>{{ pageTitle }}</ion-title>
       <ion-buttons slot="end">
-        <!-- Simple search input -->
-        <ion-item class="search-item" lines="none">
-          <ion-input
-            v-model="searchTextProxy"
-            placeholder="Search tasks..."
-            clear-input
-          ></ion-input>
-        </ion-item>
+        <!-- Modern search bar -->
+        <ion-searchbar
+          class="searchbar-modern"
+          v-model="searchTextProxy"
+          placeholder="Search tasks..."
+          inputmode="search"
+          :debounce="150"
+          show-clear-button="always"
+          shape="round"
+          animated
+          aria-label="Search tasks"
+        />
         <span v-if="isAuthenticated && funMode" class="ag-tooltip" data-label="Daily streak">
           <ion-badge
             id="btnStreakInfo"
@@ -89,8 +93,9 @@ import {
   IonButton,
   IonMenuButton,
   IonTitle,
-  IonItem,
-  IonInput,
+
+
+  IonSearchbar,
   IonBadge,
   IonIcon,
 } from '@ionic/vue';
@@ -132,4 +137,32 @@ const searchTextProxy = computed({
   set: (val: string) => emit('update:searchText', val ?? ''),
 });
 </script>
+
+<style scoped>
+/* Modern, pill-shaped search bar that respects Ionic theming */
+.searchbar-modern {
+  /* Sizing within toolbar */
+  margin-right: 12px;
+  width: clamp(160px, 28vw, 320px);
+  --border-radius: 9999px;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --icon-color: var(--ion-color-medium);
+  --placeholder-color: var(--ion-color-medium);
+  --color: var(--ion-text-color, inherit);
+  /* Subtle glassy background using theme-aware colors */
+  --background: color-mix(in oklab, var(--ion-color-light) 70%, transparent);
+  backdrop-filter: saturate(180%) blur(8px);
+}
+
+@media (max-width: 480px) {
+  .searchbar-modern { width: 46vw; }
+}
+
+/* Tighten the inner input height a bit for header */
+.searchbar-modern .searchbar-input-container {
+  height: 36px;
+}
+</style>
 
