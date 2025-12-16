@@ -20,6 +20,35 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Todonow++" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+    <style>
+      /* Global improvements for Ionic ion-loading readability across themes */
+      /* Ensure high specificity and theme-variable alignment */
+      :root ion-loading {
+        /* Increase dimming to improve contrast against background content */
+        --backdrop-opacity: 0.46 !important;
+        /* Text color follows app theme (light = dark text) */
+        --color: var(--ion-text-color, rgba(16, 16, 19, 0.95)) !important;
+        /* Make spinner clearly visible */
+        --spinner-color: var(--ion-color-primary, #3880ff) !important;
+        /* Slightly constrain width for better readability of multiline messages */
+        --max-width: 340px !important;
+        /* High-contrast light surface with subtle translucency */
+        --background: rgba(255, 255, 255, 0.96) !important;
+      }
+
+      /* Robust dark-mode overrides (cover html/body root and utility .dark class) */
+      html.dark ion-loading,
+      body.dark ion-loading,
+      :root.dark ion-loading,
+      .dark ion-loading {
+        /* Dark theme: bright text on dark surface */
+        --color: var(--ion-text-color, rgba(255, 255, 255, 0.98)) !important;
+        --background: rgba(20, 20, 22, 0.94) !important;
+        --spinner-color: var(--ion-color-primary, #4c8dff) !important;
+        --backdrop-opacity: 0.54 !important;
+      }
+    </style>
   </head>
 
   <body>

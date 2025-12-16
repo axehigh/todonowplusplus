@@ -144,25 +144,51 @@ const searchTextProxy = computed({
   /* Sizing within toolbar */
   margin-right: 12px;
   width: clamp(160px, 28vw, 320px);
-  --border-radius: 9999px;
+  --border-radius: 9999px; /* keep pill shape for internal container */
   --padding-top: 0;
   --padding-bottom: 0;
-  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  /* Default (light theme): keep subtle placeholder/icon */
   --icon-color: var(--ion-color-medium);
   --placeholder-color: var(--ion-color-medium);
   --color: var(--ion-text-color, inherit);
-  /* Subtle glassy background using theme-aware colors */
-  --background: color-mix(in oklab, var(--ion-color-light) 70%, transparent);
-  backdrop-filter: saturate(180%) blur(8px);
+  /* IMPORTANT: make the host background transparent to avoid square block */
+  --background: transparent;
 }
 
 @media (max-width: 480px) {
   .searchbar-modern { width: 46vw; }
 }
 
-/* Tighten the inner input height a bit for header */
+/* Tighten the inner input height and style the actual pill container */
 .searchbar-modern .searchbar-input-container {
   height: 36px;
+  border-radius: 9999px;
+  overflow: hidden; /* ensure any inner effects are clipped to the pill */
+  /* Theme-aware subtle surface with good contrast in both themes */
+  background: color-mix(in oklab, var(--ion-background-color, #fff) 82%, var(--ion-text-color, #000) 18%);
+  border: 1px solid color-mix(in oklab, var(--ion-background-color, #fff) 62%, var(--ion-text-color, #000) 38%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Focus ring for accessibility and modern feel */
+.searchbar-modern:focus-within .searchbar-input-container {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ion-color-primary, #3880ff) 30%, transparent), 0 3px 10px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in oklab, var(--ion-color-primary, #3880ff) 40%, var(--ion-text-color, #000) 60%);
+}
+
+/* Dark theme: increase contrast for text and icons inside the searchbar */
+html.dark .searchbar-modern,
+body.dark .searchbar-modern,
+:root.dark .searchbar-modern,
+.dark .searchbar-modern {
+  /* Bright text for input value */
+  --color: rgba(255, 255, 255, 0.98);
+  /* Make the magnifier icon clearly visible */
+  --icon-color: rgba(255, 255, 255, 0.92);
+  /* Placeholder still slightly dimmer than text, but readable */
+  --placeholder-color: rgba(255, 255, 255, 0.78);
+  /* Ensure the clear (×) button is visible too */
+  --clear-button-color: rgba(255, 255, 255, 0.92);
 }
 </style>
 

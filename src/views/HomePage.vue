@@ -58,9 +58,9 @@
           <ion-refresher-content></ion-refresher-content>
         </ion-refresher>
 
-        <!-- Inline sync indicator chip under toolbar -->
-        <div v-if="isAuthenticated && syncingVisible" class="sync-banner">
-          <ion-icon :icon="cloudUploadOutline" class="sync-icon" />
+        <!-- Inline sync spinner under toolbar -->
+        <div v-if="isAuthenticated && syncingVisible" class="sync-inline" aria-live="polite" aria-busy="true">
+          <ion-spinner name="crescent" class="sync-inline-spinner" aria-label="Syncing with Dropbox"></ion-spinner>
           <span>Syncing with Dropbox...</span>
         </div>
 
@@ -120,13 +120,14 @@ import {
   IonIcon,
   IonLoading,
   IonPage,
+  IonSpinner,
   IonRefresher,
   IonRefresherContent,
   IonTitle,
   IonToolbar,
   onIonViewWillEnter
 } from '@ionic/vue';
-import {add, cloudUploadOutline} from 'ionicons/icons';
+import {add} from 'ionicons/icons';
 import {computed, ref, watch} from 'vue';
 import {dropboxService, gamificationService, todoService} from '../services';
 import {TodoItem} from '../services/TodoService';
@@ -339,21 +340,25 @@ watch(
 
 <style scoped>
 
-.sync-banner {
+.sync-inline {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  justify-content: center;
+  padding: 6px 0;
   margin: 4px 12px 0 12px;
   border-radius: 12px;
-  background: var(--ion-color-light);
-  color: var(--ion-color-medium-contrast, var(--ion-color-medium));
-  font-size: 14px;
+  /* Theme-aware elevated surface to ensure spinner contrast */
+  background: color-mix(in oklab, var(--ion-background-color, #ffffff) 72%, var(--ion-text-color, #000000) 28%);
+  border: 1px solid color-mix(in oklab, var(--ion-background-color, #ffffff) 55%, var(--ion-text-color, #000000) 45%);
+  backdrop-filter: saturate(140%) blur(6px);
 }
 
-.sync-icon {
-  font-size: 18px;
-  color: var(--ion-color-primary);
+.sync-inline-spinner {
+  width: 22px;
+  height: 22px;
+  /* Use brand color for visibility and a tiny glow to stand out */
+  color: var(--ion-color-primary) !important;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
 }
 
 </style>
