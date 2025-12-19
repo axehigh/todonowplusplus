@@ -6,9 +6,9 @@
       </ion-buttons>
       <ion-title>{{ pageTitle }}</ion-title>
       <ion-buttons slot="end">
-        <!-- Modern search bar -->
+        <!-- Desktop/Tablet: full searchbar -->
         <ion-searchbar
-          class="searchbar-modern"
+          class="searchbar-modern toolbar-only-wide"
           v-model="searchTextProxy"
           placeholder="Search tasks..."
           inputmode="search"
@@ -18,6 +18,13 @@
           animated
           aria-label="Search tasks"
         />
+
+        <!-- Mobile: toolbar search button that opens the bottom sheet -->
+        <span class="mobile-only ag-tooltip" data-label="Search">
+          <ion-button id="btnOpenSearch" aria-label="Open search" @click="$emit('open-search')">
+            <ion-icon :icon="searchOutline"></ion-icon>
+          </ion-button>
+        </span>
         <span v-if="isAuthenticated && funMode" class="ag-tooltip" data-label="Daily streak">
           <ion-badge
             id="btnStreakInfo"
@@ -107,6 +114,7 @@ import {
   swapVerticalOutline,
   createOutline,
   trashOutline,
+  searchOutline,
 } from 'ionicons/icons';
 import { computed } from 'vue';
 
@@ -130,12 +138,15 @@ const emit = defineEmits<{
   (e: 'toggle-sort-mode'): void;
   (e: 'rename-list'): void;
   (e: 'delete-list'): void;
+  (e: 'open-search'): void;
 }>();
 
 const searchTextProxy = computed({
   get: () => props.searchText,
   set: (val: string) => emit('update:searchText', val ?? ''),
 });
+
+// Mobile: toolbar button triggers bottom sheet from parent; no local state needed
 </script>
 
 <style scoped>
@@ -156,7 +167,7 @@ const searchTextProxy = computed({
 }
 
 @media (max-width: 480px) {
-  .searchbar-modern { width: 46vw; }
+  .toolbar-only-wide { display: none; }
 }
 
 /* Tighten the inner input height and style the actual pill container */
@@ -189,6 +200,11 @@ body.dark .searchbar-modern,
   --placeholder-color: rgba(255, 255, 255, 0.78);
   /* Ensure the clear (×) button is visible too */
   --clear-button-color: rgba(255, 255, 255, 0.92);
+}
+
+.mobile-only { display: none; }
+@media (max-width: 480px) {
+  .mobile-only { display: inline-flex; align-items: center; }
 }
 </style>
 

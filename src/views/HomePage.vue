@@ -7,10 +7,13 @@
       :is-global-category-mode="isGlobalCategoryMode"
       :category-filter="categoryFilter"
       :is-authenticated="isAuthenticated"
+      :search-text="searchText"
       @add-list="presentAddListAlert"
       @select-focus-mode="selectFocusMode"
       @select-global-category="selectGlobalCategory"
       @select-list="selectList"
+      @update:searchText="val => (searchText = val)"
+      @reorder-lists="onReorderLists"
     />
 
     <div class="ion-page" id="main-content">
@@ -31,6 +34,7 @@
         @toggle-sort-mode="toggleSortMode"
         @rename-list="presentRenameListAlert"
         @delete-list="presentDeleteListAlert"
+        @open-search="() => (isSearchSheetOpen = true)"
       />
 
       <GamificationPopovers
@@ -107,6 +111,12 @@
           </ion-fab-button>
         </ion-fab>
       </ion-content>
+
+      <SearchBottomSheet
+        v-model:isOpen="isSearchSheetOpen"
+        v-model:searchText="searchText"
+        :initialBreakpoint="0.6"
+      />
     </div>
   </ion-page>
 </template>
@@ -137,6 +147,7 @@ import GamificationPopovers from '../components/GamificationPopovers.vue';
 import WelcomeCard from '../components/WelcomeCard.vue';
 import EmptyListsState from '../components/EmptyListsState.vue';
 import TodoListView from '../components/TodoListView.vue';
+import SearchBottomSheet from '../components/SearchBottomSheet.vue';
 import {useTodoSelectionMode} from '../composables/useTodoSelectionMode';
 import {useTodoMutations} from '../composables/useTodoMutations';
 
@@ -159,6 +170,7 @@ const showCompleted = ref(true);
 const quickAddText = ref('');
 const searchText = ref('');
 const isSearching = computed(() => searchText.value.trim().length > 0);
+const isSearchSheetOpen = ref(false);
 const sortMode = ref<'manual' | 'priority'>('manual');
 const isLoading = ref(false);
 // Local, debounced visibility for the inline syncing banner
@@ -269,6 +281,14 @@ const toggleSortMode = () => {
     sortMode.value = sortMode.value === 'manual' ? 'priority' : 'manual';
 };
 
+const handleMoveListUp = (index: number) => {
+  todoService.moveListUp(index);
+};
+
+const handleMoveListDown = (index: number) => {
+  todoService.moveListDown(index);
+};
+
 const checkAuth = async () => {
   isAuthenticated.value = dropboxService.isAuthenticated();
   if (isAuthenticated.value) {
@@ -335,6 +355,17 @@ watch(
   },
   { immediate: true }
 );
+
+const onReorderLists = ({ from, to }: { from: number; to: number }) => {
+  // Reuse existing list reordering logic in the service
+  const listsArr = todoService.lists.value;
+  if (from < 0 || from >= listsArr.length || to < 0 || to >= listsArr.length) return;
+
+  const [moved] = listsArr.splice(from, 1);
+  listsArr.splice(to, 0, moved);
+  // Persist order
+  (todoService as any).saveTodos?.();
+};
 
 </script>
 

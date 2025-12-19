@@ -286,6 +286,28 @@ export class TodoService {
         await this.saveTodos();
     }
 
+    moveList(listIndex: number, direction: 'up' | 'down') {
+        const lists = this.lists.value;
+        if (lists.length < 2) return;
+        if (listIndex < 0 || listIndex >= lists.length) return;
+
+        const targetIndex = direction === 'up' ? listIndex - 1 : listIndex + 1;
+        if (targetIndex < 0 || targetIndex >= lists.length) return;
+
+        const [moved] = lists.splice(listIndex, 1);
+        lists.splice(targetIndex, 0, moved);
+        // Persist new list order to todo.txt
+        this.saveTodos();
+    }
+
+    moveListUp(index: number) {
+        this.moveList(index, 'up');
+    }
+
+    moveListDown(index: number) {
+        this.moveList(index, 'down');
+    }
+
     private async saveTodos() {
         if (!this.dropbox.isAuthenticated()) return;
 
@@ -400,40 +422,15 @@ export class TodoService {
                     // File might not exist, that's fine
                 }
 
-                const newDoneContent = currentDone + (currentDone && !currentDone.endsWith('\n') ? '\n' : '') + doneContent;
+                const newDoneContent = (currentDone + doneContent).trim() + '\n';
                 await this.dropbox.writeFile('/done.txt', newDoneContent);
-            } catch (error) {
-                console.error('Error archiving to done.txt:', error);
-                // If we fail to archive, we probably shouldn't save the deletion from todo.txt?
-                // But for now, let's proceed or throw.
-                throw error;
+                this.lastSyncTime.value = new Date().toISOString();
+            } catch (e) {
+                console.error('Failed to archive completed todos to done.txt', e);
             }
         }
 
-        // 3. Save updated todo.txt
+        // 3. Save the updated todo lists (without the completed items)
         await this.saveTodos();
-    }
-
-    /**
-     * Loads completed tasks from /done.txt in Dropbox and returns them as TodoItem[]
-     * This is read-only; it does not modify in-memory lists.
-     * If the file does not exist or the user is not authenticated, returns an empty array.
-     */
-    async loadDoneItems(): Promise<TodoItem[]> {
-        const donePath = '/done.txt';
-        const items: TodoItem[] = [];
-        if (!this.dropbox.isAuthenticated()) return items;
-        let content = '';
-        try {
-            content = await this.dropbox.readFile(donePath);
-        } catch (e) {
-            // File may not exist yet; treat as empty
-            return items;
-        }
-        const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('#'));
-        for (const line of lines) {
-            items.push(this.parseTodoLine(line));
-        }
-        return items;
     }
 }

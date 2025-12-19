@@ -26,6 +26,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/auth',
     name: 'Auth',
     component: () => import('../views/AuthPage.vue')
+  },
+  {
+    path: '/lists',
+    name: 'ListManagement',
+    component: () => import('../views/ListManagementPage.vue')
   }
 ]
 
