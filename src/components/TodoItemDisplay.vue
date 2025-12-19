@@ -93,11 +93,11 @@ const getPriorityColor = (priority?: string) => {
 
 const getCategoryColor = (category?: string) => {
   switch (category) {
-    case 'Reminder':
+    case 'Reminders':
       return 'tertiary';
-    case 'Do':
+    case 'Quick':
       return 'primary';
-    case 'Long Task':
+    case 'Deep':
       return 'secondary';
     default:
       return 'medium';
@@ -106,12 +106,12 @@ const getCategoryColor = (category?: string) => {
 
 const getCategoryIcon = (category?: string) => {
   switch (category) {
-    case 'Reminder':
-      return calendarOutline; // same icon as used in the Category select for Reminder
-    case 'Do':
-      return checkmarkDoneOutline; // same icon as used in the Category select for Do
-    case 'Long Task':
-      return timeOutline; // same icon as used in the Category select for Long Task
+    case 'Reminders':
+      return calendarOutline;
+    case 'Quick':
+      return checkmarkDoneOutline;
+    case 'Deep':
+      return timeOutline;
     default:
       return undefined as any;
   }

@@ -233,10 +233,10 @@ const filteredItems = computed(() => {
 
     // Apply category filter ONLY in Global Category mode (not during global search)
     if (!isSearching.value && isGlobalCategoryMode.value && categoryFilter.value !== 'All') {
-        if (categoryFilter.value === 'Reminder') {
-            // In Reminder view, show all tasks that have a due date (i.e., an actual reminder).
-            // Keep compatibility with any items explicitly tagged as cat:Reminder.
-            items = items.filter(item => !!item.dueDate || item.category === 'Reminder');
+        if (categoryFilter.value === 'Reminders') {
+            // In Reminders view, show all tasks that have a due date (i.e., an actual reminder).
+            // Keep compatibility with any items explicitly tagged as cat:Reminders.
+            items = items.filter(item => !!item.dueDate || item.category === 'Reminders');
         } else {
             items = items.filter(item => item.category === categoryFilter.value);
         }

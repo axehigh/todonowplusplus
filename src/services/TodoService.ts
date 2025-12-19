@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { DropboxService } from './DropboxService';
 import type { GameTrackService } from './GameTrackService';
 
-export type TaskCategory = 'Reminder' | 'Do' | 'Long Task' | '';
+export type TaskCategory = 'Reminders' | 'Quick' | 'Deep' | '';
 
 export interface TodoItem {
     raw: string;
@@ -110,8 +110,8 @@ export class TodoService {
             item.text = item.text.replace(dueRegex, '').trim();
         }
 
-        // 4. Category (cat:Reminder, cat:Do, cat:Long Task)
-        const catRegex = /\bcat:(Reminder|Do|Long Task)\b/;
+        // 4. Category (cat:Reminders, cat:Quick, cat:Deep)
+        const catRegex = /\bcat:(Reminders|Quick|Deep)\b/;
         const catMatch = item.text.match(catRegex);
         if (catMatch) {
             item.category = catMatch[1] as TaskCategory;

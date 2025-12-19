@@ -75,7 +75,7 @@
 
         <!-- Global Category Filters -->
         <ion-item-divider>
-          <ion-label>Filters</ion-label>
+          <ion-label>Quick Filters</ion-label>
         </ion-item-divider>
 
         <ion-menu-toggle :auto-hide="false">
@@ -93,54 +93,54 @@
         <ion-menu-toggle :auto-hide="false">
           <ion-item
               button
-              @click="$emit('select-global-category', 'Reminder')"
-              :color="isGlobalCategoryMode && categoryFilter === 'Reminder' ? 'secondary' : ''"
+              @click="$emit('select-global-category', 'Reminders')"
+              :color="isGlobalCategoryMode && categoryFilter === 'Reminders' ? 'secondary' : ''"
               :detail="false"
               class="list-item"
           >
             <ion-icon slot="start" :icon="alarmOutline"></ion-icon>
-            <ion-label>Reminder</ion-label>
+            <ion-label>Reminders</ion-label>
           </ion-item>
         </ion-menu-toggle>
         <ion-menu-toggle :auto-hide="false">
           <ion-item
               button
-              @click="$emit('select-global-category', 'Do')"
-              :color="isGlobalCategoryMode && categoryFilter === 'Do' ? 'secondary' : ''"
+              @click="$emit('select-global-category', 'Quick')"
+              :color="isGlobalCategoryMode && categoryFilter === 'Quick' ? 'secondary' : ''"
               :detail="false"
               class="list-item"
           >
             <ion-icon slot="start" :icon="checkmarkDoneOutline"></ion-icon>
-            <ion-label>Do</ion-label>
+            <ion-label>Quick</ion-label>
           </ion-item>
         </ion-menu-toggle>
         <ion-menu-toggle :auto-hide="false">
           <ion-item
               button
-              @click="$emit('select-global-category', 'Long Task')"
-              :color="isGlobalCategoryMode && categoryFilter === 'Long Task' ? 'secondary' : ''"
+              @click="$emit('select-global-category', 'Deep')"
+              :color="isGlobalCategoryMode && categoryFilter === 'Deep' ? 'secondary' : ''"
               :detail="false"
               class="list-item"
           >
             <ion-icon slot="start" :icon="timeOutline"></ion-icon>
-            <ion-label>Long Task</ion-label>
+            <ion-label>Deep</ion-label>
           </ion-item>
         </ion-menu-toggle>
 
-        <!--System-->
+        <!--Tools-->
         <ion-item-divider class="ion-margin-top">
-          <ion-label>System</ion-label>
+          <ion-label>Tools</ion-label>
         </ion-item-divider>
         <ion-menu-toggle :auto-hide="true" v-if="isAuthenticated">
           <ion-item button router-link="/done" :detail="false" class="list-item">
             <ion-icon slot="start" :icon="checkmarkDoneOutline"></ion-icon>
-            <ion-label>Done</ion-label>
+            <ion-label>Completed tasks</ion-label>
           </ion-item>
         </ion-menu-toggle>
         <ion-menu-toggle :auto-hide="true">
           <ion-item button router-link="/lists" :detail="false" class="list-item">
             <ion-icon slot="start" :icon="listOutline"></ion-icon>
-            <ion-label>List Management</ion-label>
+            <ion-label>Manage lists</ion-label>
           </ion-item>
         </ion-menu-toggle>
 
@@ -194,7 +194,7 @@ const props = defineProps<{
   selectedListIndex: number;
   isFocusMode: boolean;
   isGlobalCategoryMode: boolean;
-  categoryFilter: 'All' | 'Reminder' | 'Do' | 'Long Task';
+  categoryFilter: 'All' | 'Reminders' | 'Quick' | 'Deep';
   isAuthenticated: boolean;
   searchText?: string;
 }>();
@@ -202,7 +202,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'add-list'): void;
   (e: 'select-focus-mode'): void;
-  (e: 'select-global-category', category: 'All' | 'Reminder' | 'Do' | 'Long Task'): void;
+  (e: 'select-global-category', category: 'All' | 'Reminders' | 'Quick' | 'Deep'): void;
   (e: 'select-list', index: number): void;
   (e: 'update:searchText', value: string): void;
 }>();

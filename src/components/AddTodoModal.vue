@@ -37,14 +37,14 @@
       <ion-label>Category</ion-label>
       <ion-select v-model="category" interface="popover">
         <ion-select-option value="">None</ion-select-option>
-        <ion-select-option value="Do">
-          Do
+        <ion-select-option value="Quick">
+          Quick
         </ion-select-option>
-        <ion-select-option value="Long Task">
-          Long Task
+        <ion-select-option value="Deep">
+          Deep
         </ion-select-option>
-        <ion-select-option value="Reminder">
-          Reminder
+        <ion-select-option value="Reminders">
+          Reminders
         </ion-select-option>
       </ion-select>
     </ion-item>

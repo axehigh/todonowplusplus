@@ -1,7 +1,7 @@
 import { computed, ref, type Ref } from 'vue';
 import type { TodoList } from '../services/TodoService';
 
-export type CategoryFilter = 'All' | 'Reminder' | 'Do' | 'Long Task';
+export type CategoryFilter = 'All' | 'Reminders' | 'Quick' | 'Deep';
 
 /**
  * Encapsulates selection state for lists, focus mode, and global category mode
