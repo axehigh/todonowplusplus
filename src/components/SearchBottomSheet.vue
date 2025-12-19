@@ -14,6 +14,9 @@
         <ion-toolbar>
           <ion-title>Search</ion-title>
           <ion-buttons slot="end">
+            <ion-button fill="clear" size="small" @click="clearAndClose" aria-label="Clear search">
+              Clear
+            </ion-button>
             <ion-button aria-label="Close search" @click="close">
               Close
             </ion-button>
@@ -36,9 +39,6 @@
             aria-label="Search tasks"
           />
         </div>
-
-        <!-- Placeholder for future recent searches or filters -->
-        <!-- <ion-list class="recent-list" v-if="recent.length"> ... </ion-list> -->
       </ion-content>
     </div>
   </ion-modal>
@@ -95,6 +95,11 @@ function onWillDismiss() {
 }
 
 function close() {
+  emit('update:isOpen', false);
+}
+
+function clearAndClose() {
+  emit('update:searchText', '');
   emit('update:isOpen', false);
 }
 </script>
