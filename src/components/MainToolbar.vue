@@ -19,6 +19,41 @@
           aria-label="Search tasks"
         />
 
+        <!-- Desktop: quick filters inline in toolbar -->
+        <div
+          v-if="isAuthenticated"
+          class="toolbar-quick-filters toolbar-only-wide"
+          aria-label="Quick filters"
+        >
+          <button
+            class="quick-filter-chip"
+            :class="{ 'quick-filter-chip--active': isGlobalCategoryMode && categoryFilter === 'Reminders' }"
+            type="button"
+            @click="() => onSelectCategory('Reminders')"
+          >
+            <ion-icon :icon="alarmOutline" class="quick-filter-icon" />
+            <span>Reminders</span>
+          </button>
+          <button
+            class="quick-filter-chip"
+            :class="{ 'quick-filter-chip--active': isGlobalCategoryMode && categoryFilter === 'Quick' }"
+            type="button"
+            @click="() => onSelectCategory('Quick')"
+          >
+            <ion-icon :icon="checkmarkDoneOutline" class="quick-filter-icon" />
+            <span>Quick</span>
+          </button>
+          <button
+            class="quick-filter-chip"
+            :class="{ 'quick-filter-chip--active': isGlobalCategoryMode && categoryFilter === 'Deep' }"
+            type="button"
+            @click="() => onSelectCategory('Deep')"
+          >
+            <ion-icon :icon="timeOutline" class="quick-filter-icon" />
+            <span>Deep</span>
+          </button>
+        </div>
+
         <!-- Mobile: toolbar search button that opens the bottom sheet -->
         <span class="mobile-only ag-tooltip" data-label="Search">
           <ion-button id="btnOpenSearch" aria-label="Open search" @click="$emit('open-search')">
@@ -67,26 +102,6 @@
             <ion-icon :icon="swapVerticalOutline"></ion-icon>
           </ion-button>
         </span>
-
-        <span
-          class="ag-tooltip"
-          v-if="isAuthenticated && !isFocusMode && hasCurrentList"
-          :data-label="'Rename List'"
-        >
-          <ion-button id="btnRenameList" @click="$emit('rename-list')" color="light" aria-label="Rename List">
-            <ion-icon :icon="createOutline"></ion-icon>
-          </ion-button>
-        </span>
-
-        <span
-          class="ag-tooltip"
-          v-if="isAuthenticated && !isFocusMode && hasCurrentList"
-          :data-label="'Delete List'"
-        >
-          <ion-button id="btnDeleteList" @click="$emit('delete-list')" color="light" aria-label="Delete List">
-            <ion-icon :icon="trashOutline"></ion-icon>
-          </ion-button>
-        </span>
       </ion-buttons>
     </ion-toolbar>
   </ion-header>
@@ -100,8 +115,6 @@ import {
   IonButton,
   IonMenuButton,
   IonTitle,
-
-
   IonSearchbar,
   IonBadge,
   IonIcon,
@@ -112,9 +125,10 @@ import {
   eyeOutline,
   eyeOffOutline,
   swapVerticalOutline,
-  createOutline,
-  trashOutline,
   searchOutline,
+  alarmOutline,
+  checkmarkDoneOutline,
+  timeOutline,
 } from 'ionicons/icons';
 import { computed } from 'vue';
 
@@ -129,6 +143,7 @@ const props = defineProps<{
   hasCurrentList: boolean;
   isFocusMode: boolean;
   isGlobalCategoryMode: boolean;
+  categoryFilter: 'All' | 'Reminders' | 'Quick' | 'Deep';
   searchText: string;
 }>();
 
@@ -136,9 +151,8 @@ const emit = defineEmits<{
   (e: 'update:searchText', value: string): void;
   (e: 'update:showCompleted', value: boolean): void;
   (e: 'toggle-sort-mode'): void;
-  (e: 'rename-list'): void;
-  (e: 'delete-list'): void;
   (e: 'open-search'): void;
+  (e: 'select-category', value: 'Reminders' | 'Quick' | 'Deep'): void;
 }>();
 
 const searchTextProxy = computed({
@@ -146,7 +160,9 @@ const searchTextProxy = computed({
   set: (val: string) => emit('update:searchText', val ?? ''),
 });
 
-// Mobile: toolbar button triggers bottom sheet from parent; no local state needed
+const onSelectCategory = (value: 'Reminders' | 'Quick' | 'Deep') => {
+  emit('select-category', value);
+};
 </script>
 
 <style scoped>
@@ -164,6 +180,37 @@ const searchTextProxy = computed({
   --color: var(--ion-text-color, inherit);
   /* IMPORTANT: make the host background transparent to avoid square block */
   --background: transparent;
+}
+
+.toolbar-quick-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+}
+
+/* Quick filter chips for desktop toolbar */
+.quick-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--ion-background-color, #ffffff) 55%, var(--ion-text-color, #000000) 45%);
+  background: color-mix(in oklab, var(--ion-background-color, #ffffff) 80%, var(--ion-text-color, #000000) 20%);
+  color: var(--ion-text-color, inherit);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.quick-filter-chip--active {
+  border-color: var(--ion-color-primary);
+  background: color-mix(in oklab, var(--ion-color-primary) 85%, transparent);
+  color: var(--ion-color-primary-contrast, #ffffff);
+}
+
+.quick-filter-icon {
+  font-size: 0.9rem;
 }
 
 @media (max-width: 480px) {
@@ -207,4 +254,3 @@ body.dark .searchbar-modern,
   .mobile-only { display: inline-flex; align-items: center; }
 }
 </style>
-

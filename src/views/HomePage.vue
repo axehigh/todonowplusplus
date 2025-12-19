@@ -28,13 +28,13 @@
         :has-current-list="!!currentList"
         :is-focus-mode="isFocusMode"
         :is-global-category-mode="isGlobalCategoryMode"
+        :category-filter="categoryFilter"
         :search-text="searchText"
         @update:searchText="val => (searchText = val)"
         @update:showCompleted="val => (showCompleted = val)"
         @toggle-sort-mode="toggleSortMode"
-        @rename-list="presentRenameListAlert"
-        @delete-list="presentDeleteListAlert"
         @open-search="() => (isSearchSheetOpen = true)"
+        @select-category="handleToolbarCategoryClick"
       />
 
       <GamificationPopovers
@@ -166,7 +166,7 @@ const {
 } = useTodoSelectionMode(lists);
 
 const isAuthenticated = ref(false);
-const showCompleted = ref(true);
+const showCompleted = ref(false); // default: hide completed tasks
 const quickAddText = ref('');
 const searchText = ref('');
 const isSearching = computed(() => searchText.value.trim().length > 0);
@@ -365,6 +365,19 @@ const onReorderLists = ({ from, to }: { from: number; to: number }) => {
   listsArr.splice(to, 0, moved);
   // Persist order
   (todoService as any).saveTodos?.();
+};
+
+const handleToolbarCategoryClick = (value: 'Reminders' | 'Quick' | 'Deep') => {
+  // Toggle behavior for toolbar chips:
+  // - If we're already in this global category, revert back to normal list view.
+  // - Otherwise, enter that global category mode.
+  if (isGlobalCategoryMode.value && categoryFilter.value === value) {
+    isGlobalCategoryMode.value = false;
+    isFocusMode.value = false;
+    categoryFilter.value = 'All';
+  } else {
+    selectGlobalCategory(value as any);
+  }
 };
 
 </script>

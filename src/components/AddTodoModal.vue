@@ -49,13 +49,21 @@
       </ion-select>
     </ion-item>
 
-    <ion-item id="open-date-modal">
+    <!-- Due Date: only for Reminders category -->
+    <ion-item
+      id="open-date-modal"
+      v-if="category === 'Reminders'"
+    >
       <ion-label>Due Date</ion-label>
       <ion-text slot="end">{{ dueDate || 'None' }}</ion-text>
       <ion-icon :icon="calendarOutline" slot="end"></ion-icon>
     </ion-item>
 
-    <ion-modal trigger="open-date-modal" :keep-contents-mounted="true">
+    <ion-modal
+      v-if="category === 'Reminders'"
+      trigger="open-date-modal"
+      :keep-contents-mounted="true"
+    >
       <ion-content>
         <ion-datetime
           presentation="date"
@@ -66,10 +74,16 @@
       </ion-content>
     </ion-modal>
 
-    <!-- Time Spent (only shown when editing) -->
-    <ion-item v-if="isEdit">
+    <!-- Time Spent (only shown when editing Deep tasks) -->
+    <ion-item v-if="isEdit && category === 'Deep'">
       <ion-label position="stacked">Time Spent (minutes)</ion-label>
-      <ion-input type="number" inputmode="numeric" v-model.number="timeSpentLocal" min="0" placeholder="e.g. 30"></ion-input>
+      <ion-input
+        type="number"
+        inputmode="numeric"
+        v-model.number="timeSpentLocal"
+        min="0"
+        placeholder="e.g. 30"
+      ></ion-input>
     </ion-item>
 
     <div class="ion-padding-top">
@@ -81,7 +95,7 @@
 <script setup lang="ts">
 import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonSelect, IonSelectOption, IonModal, IonDatetime, IonText, IonIcon, modalController } from '@ionic/vue';
 import { calendarOutline } from 'ionicons/icons';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 type Mode = 'add' | 'edit';
 
@@ -110,6 +124,12 @@ const cancel = () => {
   modalController.dismiss(null, 'cancel');
 };
 
+watch(category, (newVal, oldVal) => {
+  if (oldVal === 'Reminders' && newVal !== 'Reminders') {
+    dueDate.value = '';
+  }
+});
+
 const save = () => {
   if (!isEdit.value) {
     // Construct the todo string for adding
@@ -121,8 +141,8 @@ const save = () => {
 
     todoString += text.value;
 
-    if (dueDate.value) {
-      // IonDatetime returns ISO string (YYYY-MM-DDTHH:mm:ss...), we just need YYYY-MM-DD
+    // Only attach due:... for Reminders tasks
+    if (category.value === 'Reminders' && dueDate.value) {
       const datePart = dueDate.value.split('T')[0];
       todoString += ` due:${datePart}`;
     }
@@ -140,14 +160,16 @@ const save = () => {
       category: category.value || '',
     };
 
-    if (dueDate.value) {
+    // Only persist dueDate for Reminders; otherwise clear it
+    if (category.value === 'Reminders' && dueDate.value) {
       const datePart = dueDate.value.includes('T') ? dueDate.value.split('T')[0] : dueDate.value;
       updates.dueDate = datePart;
     } else {
       updates.dueDate = '';
     }
 
-    if (typeof timeSpentLocal.value === 'number' && timeSpentLocal.value >= 0) {
+    // Only allow editing timeSpent for Deep tasks; otherwise leave unchanged
+    if (category.value === 'Deep' && typeof timeSpentLocal.value === 'number' && timeSpentLocal.value >= 0) {
       updates.timeSpent = timeSpentLocal.value;
     }
 
