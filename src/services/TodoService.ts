@@ -25,7 +25,9 @@ export interface TodoList {
 export class TodoService {
     private dropbox: DropboxService;
     public lists = ref<TodoList[]>([]);
-    private readonly FILE_PATH = '/todo.txt';
+    private readonly BASE_PATH = '/';
+    private readonly TODO_FILE_NAME = 'todo.txt';
+    private readonly DONE_FILE_NAME = 'done.txt';
     private gameTracker: GameTrackService | null = null;
     public isSyncing = ref<boolean>(false);
     public lastSyncTime = ref<string | null>(null);
@@ -46,7 +48,7 @@ export class TodoService {
         }
         try {
             this.isSyncing.value = true;
-            const content = await this.dropbox.readFile(this.FILE_PATH);
+            const content = await this.dropbox.readFile(this.BASE_PATH + this.TODO_FILE_NAME);
             const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
             const newLists: TodoList[] = [];
@@ -323,7 +325,7 @@ export class TodoService {
                 content += '\n';
             }
 
-            await this.dropbox.writeFile(this.FILE_PATH, content.trim());
+            await this.dropbox.writeFile(this.BASE_PATH + this.TODO_FILE_NAME, content.trim());
             this.lastSyncTime.value = new Date().toISOString();
         } finally {
             this.isSyncing.value = false;
@@ -417,20 +419,40 @@ export class TodoService {
             try {
                 let currentDone = '';
                 try {
-                    currentDone = await this.dropbox.readFile('/done.txt');
+                    currentDone = await this.dropbox.readFile(this.BASE_PATH + this.DONE_FILE_NAME);
                 } catch (e) {
                     // File might not exist, that's fine
                 }
 
                 const newDoneContent = (currentDone + doneContent).trim() + '\n';
-                await this.dropbox.writeFile('/done.txt', newDoneContent);
+                await this.dropbox.writeFile(this.DONE_FILE_NAME, newDoneContent);
                 this.lastSyncTime.value = new Date().toISOString();
             } catch (e) {
-                console.error('Failed to archive completed todos to done.txt', e);
+                console.error('Failed to archive completed todos to ' + this.DONE_FILE_NAME, e);
             }
         }
 
         // 3. Save the updated todo lists (without the completed items)
         await this.saveTodos();
+    }
+
+    async loadDoneItems(): Promise<TodoItem[]> {
+        if (!this.dropbox.isAuthenticated()) {
+            console.warn('Dropbox not authenticated while loading done items');
+            return [];
+        }
+        try {
+            const content = await this.dropbox.readFile(this.BASE_PATH + this.DONE_FILE_NAME);
+            if (!content) return [];
+            const lines = content
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => l.length > 0);
+            return lines.map(line => this.parseTodoLine(line));
+        } catch (e) {
+            // If done.txt does not exist yet or cannot be read, treat as no archived items
+            console.warn('Failed to load done items from ' + this.DONE_FILE_NAME, e);
+            return [];
+        }
     }
 }

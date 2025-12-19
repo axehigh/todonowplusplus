@@ -26,8 +26,34 @@
         </ion-card>
       </div>
 
-      <ion-list v-else lines="full" class="todo-list">
-        <ion-item v-for="(todo, idx) in sortedDone" :key="idx">
+      <!-- Filters for archived tasks -->
+      <div v-else class="ion-padding done-filters">
+        <ion-searchbar
+          v-model="filterText"
+          placeholder="Search archived tasks..."
+          inputmode="search"
+          :debounce="200"
+          show-clear-button="always"
+          animated
+        />
+        <ion-segment v-model="filterCategory" value="All" class="done-category-segment">
+          <ion-segment-button value="All">
+            <ion-label>All</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="Reminders">
+            <ion-label>Reminders</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="Quick">
+            <ion-label>Quick</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="Deep">
+            <ion-label>Deep</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <ion-list v-if="isAuthenticated" lines="full" class="todo-list">
+        <ion-item v-for="(todo, idx) in filteredDone" :key="idx">
           <ion-label>
             <h2>
               <ion-badge v-if="todo.priority" :color="getPriorityColor(todo.priority)" class="priority-badge">{{ todo.priority }}</ion-badge>
@@ -49,10 +75,10 @@
           </ion-label>
         </ion-item>
 
-        <div v-if="sortedDone.length === 0" class="ion-padding ion-text-center empty-state">
+        <div v-if="filteredDone.length === 0" class="ion-padding ion-text-center empty-state">
           <ion-icon :icon="checkmarkDoneCircleOutline" size="large" color="success"></ion-icon>
           <ion-text color="medium">
-            <p>No archived tasks yet.</p>
+            <p>No archived tasks match your filter.</p>
           </ion-text>
         </div>
       </ion-list>
@@ -61,7 +87,12 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonButtons, IonBackButton, IonBadge, IonIcon, IonRefresher, IonRefresherContent, IonText, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, onIonViewWillEnter } from '@ionic/vue';
+import {
+  IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
+  IonButtons, IonBackButton, IonBadge, IonIcon, IonRefresher, IonRefresherContent,
+  IonText, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, onIonViewWillEnter,
+  IonSearchbar, IonSegment, IonSegmentButton
+} from '@ionic/vue';
 import { checkmarkDoneCircleOutline, calendarOutline, timeOutline } from 'ionicons/icons';
 import { ref, computed } from 'vue';
 import { todoService, dropboxService } from '../services';
@@ -69,6 +100,8 @@ import type { TodoItem } from '../services/TodoService';
 
 const done = ref<TodoItem[]>([]);
 const isAuthenticated = ref(false);
+const filterText = ref('');
+const filterCategory = ref<'All' | 'Reminders' | 'Quick' | 'Deep'>('All');
 
 const load = async () => {
   isAuthenticated.value = dropboxService.isAuthenticated();
@@ -91,6 +124,21 @@ const sortedDone = computed(() => {
   });
 });
 
+const filteredDone = computed(() => {
+  let items = sortedDone.value;
+
+  if (filterCategory.value !== 'All') {
+    items = items.filter(item => item.category === filterCategory.value);
+  }
+
+  if (filterText.value.trim()) {
+    const q = filterText.value.trim().toLowerCase();
+    items = items.filter(item => item.text.toLowerCase().includes(q));
+  }
+
+  return items;
+});
+
 function getPriorityColor(p?: string) {
   switch (p) {
     case 'A': return 'danger';
@@ -103,9 +151,9 @@ function getPriorityColor(p?: string) {
 
 function getCategoryColor(cat?: string) {
   switch (cat) {
-    case 'Reminder': return 'secondary';
-    case 'Do': return 'success';
-    case 'Long Task': return 'warning';
+    case 'Reminders': return 'secondary';
+    case 'Quick': return 'success';
+    case 'Deep': return 'warning';
     default: return 'medium';
   }
 }
@@ -144,5 +192,14 @@ onIonViewWillEnter(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.done-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.done-category-segment {
+  margin-top: 4px;
 }
 </style>
