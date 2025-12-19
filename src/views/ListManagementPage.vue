@@ -22,8 +22,8 @@
                 <span class="list-position">{{ index + 1 }}.</span>
                 <ion-input
                   class="list-name-input"
-                  :value="list.name"
-                  @ionBlur="event => handleRename(index, (event.target as HTMLInputElement).value)"
+                  v-model="list.name"
+                  @ionBlur="() => handleRename(index, list.name)"
                 />
               </div>
             </ion-label>
