@@ -30,6 +30,9 @@
             <ion-badge slot="end" color="tertiary" v-if="list.items.length > 0">
               {{ list.items.filter(t => !t.completed).length }}
             </ion-badge>
+            <ion-button slot="end" fill="clear" color="danger" @click="handleDelete(index)">
+              <ion-icon slot="icon-only" :icon="trashOutline" />
+            </ion-button>
             <ion-reorder slot="end" />
           </ion-item>
         </ion-reorder-group>
@@ -59,7 +62,11 @@ import {
   IonItemDivider,
   IonBadge,
   IonInput,
+  IonButton,
+  IonIcon,
+  alertController,
 } from '@ionic/vue';
+import { trashOutline } from 'ionicons/icons';
 import { todoService } from '../services';
 import type { TodoList } from '../services/TodoService';
 
@@ -86,6 +93,68 @@ const handleReorder = (event: CustomEvent) => {
 
 const handleRename = async (index: number, newName: string) => {
   await todoService.renameList(index, newName ?? '');
+};
+
+const handleDelete = async (index: number) => {
+  const list = lists.value[index];
+  if (!list) return;
+
+  const deletable = todoService.canDeleteList(index);
+
+  if (deletable) {
+    const alert = await alertController.create({
+      header: 'Delete List',
+      message: `Delete "${list.name}"? This cannot be undone.`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            await todoService.removeList(index);
+          },
+        },
+      ],
+    });
+    await alert.present();
+    return;
+  }
+
+  const options = lists.value
+    .map((l, i) => ({ name: l.name, index: i }))
+    .filter((o) => o.index !== index);
+
+  if (options.length === 0) {
+    const info = await alertController.create({
+      header: 'Cannot Delete',
+      message:
+        'This list has active tasks and there is no other list to move them to. Please create another list first.',
+      buttons: [{ text: 'OK', role: 'cancel' }],
+    });
+    await info.present();
+    return;
+  }
+
+  const moveAlert = await alertController.create({
+    header: 'Move remaining tasks',
+    message:
+      'Select a list to move the remaining tasks to, then the current list will be deleted.',
+    inputs: options.map((o) => ({
+      type: 'radio',
+      label: o.name,
+      value: o.index,
+    })),
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Move & Delete',
+        handler: async (targetIdx: number) => {
+          await todoService.removeListWithMove(index, targetIdx);
+        },
+      },
+    ],
+  });
+  await moveAlert.present();
 };
 </script>
 

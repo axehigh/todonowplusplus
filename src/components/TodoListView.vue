@@ -19,7 +19,7 @@
     </ion-item>
 
     <ion-reorder-group
-      :disabled="isFocusMode || isGlobalCategoryMode || !showCompleted || sortMode === 'priority'"
+      :disabled="isFocusMode || isGlobalCategoryMode || sortMode === 'priority'"
       @ionItemReorder="onReorder($event)"
     >
       <ion-item-sliding v-for="(todo, index) in items" :key="todo.raw">
