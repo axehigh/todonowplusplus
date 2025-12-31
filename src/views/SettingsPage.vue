@@ -53,16 +53,6 @@
         </ion-item>
       </ion-list>
 
-      <ion-list class="ion-margin-top" v-if="!searchText || 'maintenance archive'.includes(searchText.toLowerCase())">
-        <ion-item-divider>
-          <ion-label>Maintenance</ion-label>
-        </ion-item-divider>
-        <ion-item lines="none">
-          <ion-button expand="block" color="medium" @click="confirmArchive">
-            Archive Completed Tasks
-          </ion-button>
-        </ion-item>
-      </ion-list>
 
       <div class="ion-padding" v-if="!searchText || 'connect dropbox logout'.includes(searchText.toLowerCase())">
         <ion-button expand="block" @click="connect" :disabled="!clientId">Connect to Dropbox</ion-button>
@@ -81,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, IonSearchbar, alertController, loadingController } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonButton, IonButtons, IonBackButton, IonText, IonItemDivider, IonSelect, IonSelectOption, IonToggle, IonSearchbar } from '@ionic/vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { dropboxService, todoService } from '../services';
 import { gamificationService } from '../services';
@@ -205,30 +195,4 @@ const handleSearch = (event: any) => {
   searchText.value = event.detail.value || '';
 };
 
-const confirmArchive = async () => {
-  const alert = await alertController.create({
-    header: 'Archive Completed?',
-    message: 'This will move all completed todos to done.txt. This cannot be undone from the app.',
-    buttons: [
-      { text: 'Cancel', role: 'cancel' },
-      {
-        text: 'Archive',
-        role: 'confirm',
-        handler: async () => {
-          const loading = await loadingController.create({
-            message: 'Archiving completed tasks…',
-            spinner: 'crescent',
-          });
-          await loading.present();
-          try {
-            await todoService.archiveCompletedTodos();
-          } finally {
-            await loading.dismiss();
-          }
-        }
-      }
-    ]
-  });
-  await alert.present();
-};
 </script>

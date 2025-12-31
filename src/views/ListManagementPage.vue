@@ -5,6 +5,11 @@
         <ion-buttons slot="start">
           <ion-back-button default-href="/home" />
         </ion-buttons>
+        <ion-buttons slot="end">
+          <ion-button @click="confirmArchive">
+            <ion-icon slot="icon-only" :icon="archiveOutline" />
+          </ion-button>
+        </ion-buttons>
         <ion-title>List Management</ion-title>
       </ion-toolbar>
     </ion-header>
@@ -65,8 +70,9 @@ import {
   IonButton,
   IonIcon,
   alertController,
+  loadingController,
 } from '@ionic/vue';
-import { trashOutline } from 'ionicons/icons';
+import { trashOutline, archiveOutline } from 'ionicons/icons';
 import { todoService } from '../services';
 import type { TodoList } from '../services/TodoService';
 
@@ -88,7 +94,7 @@ const handleReorder = (event: CustomEvent) => {
   detail.complete();
 
   // Persist the new order in todo.txt via existing save logic
-  (todoService as any).saveTodos?.();
+  todoService.saveTodos();
 };
 
 const handleRename = async (index: number, newName: string) => {
@@ -155,6 +161,33 @@ const handleDelete = async (index: number) => {
     ],
   });
   await moveAlert.present();
+};
+
+const confirmArchive = async () => {
+  const alert = await alertController.create({
+    header: 'Archive Completed?',
+    message: 'This will move all completed todos to done.txt. This cannot be undone from the app.',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Archive',
+        role: 'confirm',
+        handler: async () => {
+          const loading = await loadingController.create({
+            message: 'Archiving completed tasks…',
+            spinner: 'crescent',
+          });
+          await loading.present();
+          try {
+            await todoService.archiveCompletedTodos();
+          } finally {
+            await loading.dismiss();
+          }
+        }
+      }
+    ]
+  });
+  await alert.present();
 };
 </script>
 

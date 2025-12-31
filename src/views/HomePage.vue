@@ -62,12 +62,6 @@
           <ion-refresher-content></ion-refresher-content>
         </ion-refresher>
 
-        <!-- Inline sync spinner under toolbar -->
-        <div v-if="isAuthenticated && syncingVisible" class="sync-inline" aria-live="polite" aria-busy="true">
-          <ion-spinner name="crescent" class="sync-inline-spinner" aria-label="Syncing with Dropbox"></ion-spinner>
-          <span>Syncing with Dropbox...</span>
-        </div>
-
         <!-- Global search context banner -->
         <div v-if="isSearching" class="sync-banner" aria-live="polite">
           <span>Searching across all lists</span>
@@ -99,6 +93,14 @@
           @delete-todo="({ todo, index }) => deleteTodoItem(todo, index)"
           @reorder="({ from, to }) => handleReorder({ detail: { from, to, complete: () => {} } } as any, filteredItems)"
         />
+
+        <div class="bottom-spacer"></div>
+
+        <!-- Inline sync spinner at the bottom of the list content -->
+        <div v-if="isAuthenticated && syncingVisible" class="sync-inline bottom-sync" aria-live="polite" aria-busy="true">
+          <ion-spinner name="crescent" class="sync-inline-spinner" aria-label="Syncing with Dropbox"></ion-spinner>
+          <span>Syncing with Dropbox...</span>
+        </div>
 
         <ion-fab
           vertical="bottom"
@@ -364,7 +366,7 @@ const onReorderLists = ({ from, to }: { from: number; to: number }) => {
   const [moved] = listsArr.splice(from, 1);
   listsArr.splice(to, 0, moved);
   // Persist order
-  (todoService as any).saveTodos?.();
+  todoService.saveTodos();
 };
 
 const handleToolbarCategoryClick = (value: 'Reminders' | 'Quick' | 'Deep') => {
@@ -395,6 +397,15 @@ const handleToolbarCategoryClick = (value: 'Reminders' | 'Quick' | 'Deep') => {
   background: color-mix(in oklab, var(--ion-background-color, #ffffff) 72%, var(--ion-text-color, #000000) 28%);
   border: 1px solid color-mix(in oklab, var(--ion-background-color, #ffffff) 55%, var(--ion-text-color, #000000) 45%);
   backdrop-filter: saturate(140%) blur(6px);
+}
+
+.bottom-sync {
+  margin-top: 16px;
+  margin-bottom: 80px; /* Space for FAB */
+}
+
+.bottom-spacer {
+  height: 24px;
 }
 
 .sync-inline-spinner {

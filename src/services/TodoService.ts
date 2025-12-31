@@ -31,6 +31,8 @@ export class TodoService {
     private gameTracker: GameTrackService | null = null;
     public isSyncing = ref<boolean>(false);
     public lastSyncTime = ref<string | null>(null);
+    private syncPromise: Promise<void> | null = null;
+    private needsSyncAgain = false;
 
     constructor(dropbox: DropboxService) {
         this.dropbox = dropbox;
@@ -46,6 +48,12 @@ export class TodoService {
             console.warn('Dropbox not authenticated');
             return;
         }
+
+        // Wait for any pending saves to finish first
+        if (this.syncPromise) {
+            await this.syncPromise;
+        }
+
         try {
             this.isSyncing.value = true;
             const content = await this.dropbox.readFile(this.BASE_PATH + this.TODO_FILE_NAME);
@@ -143,6 +151,8 @@ export class TodoService {
     }
 
     async toggleTodo(listIndex: number, todoIndex: number) {
+        // If we are currently syncing, we still allow the toggle locally (reactive).
+        // saveTodos() will handle queuing the sync if one is already in flight.
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;
 
@@ -310,26 +320,42 @@ export class TodoService {
         this.moveList(index, 'down');
     }
 
-    private async saveTodos() {
+    public async saveTodos() {
         if (!this.dropbox.isAuthenticated()) return;
 
-        try {
-            this.isSyncing.value = true;
-            let content = '';
-
-            for (const list of this.lists.value) {
-                content += `# ${list.name}\n`;
-                for (const item of list.items) {
-                    content += this.reconstructTodoLine(item) + '\n';
-                }
-                content += '\n';
-            }
-
-            await this.dropbox.writeFile(this.BASE_PATH + this.TODO_FILE_NAME, content.trim());
-            this.lastSyncTime.value = new Date().toISOString();
-        } finally {
-            this.isSyncing.value = false;
+        if (this.syncPromise) {
+            this.needsSyncAgain = true;
+            return this.syncPromise;
         }
+
+        this.syncPromise = (async () => {
+            try {
+                this.isSyncing.value = true;
+                do {
+                    this.needsSyncAgain = false;
+                    let content = '';
+
+                    for (const list of this.lists.value) {
+                        content += `# ${list.name}\n`;
+                        for (const item of list.items) {
+                            content += this.reconstructTodoLine(item) + '\n';
+                        }
+                        content += '\n';
+                    }
+
+                    // Only write if there's actually content or we want to allow empty files (todo.txt is normally never truly empty if we have at least one list)
+                    await this.dropbox.writeFile(this.BASE_PATH + this.TODO_FILE_NAME, content.trim());
+                    this.lastSyncTime.value = new Date().toISOString();
+                } while (this.needsSyncAgain);
+            } catch (error) {
+                console.error('Error saving todos to Dropbox:', error);
+            } finally {
+                this.isSyncing.value = false;
+                this.syncPromise = null;
+            }
+        })();
+
+        return this.syncPromise;
     }
 
     private reconstructTodoLine(item: TodoItem): string {
@@ -386,6 +412,16 @@ export class TodoService {
 
     async archiveCompletedTodos() {
         if (!this.dropbox.isAuthenticated()) return;
+
+        // If a sync is already in progress, it might be better to wait or let it finish.
+        // But since archive modifies the list, we should probably treat it as a mutation that triggers a sync.
+        // However, archive also writes to done.txt.
+
+        // We can't easily queue archive without making a more complex queue.
+        // Let's at least wait for current sync before starting archive.
+        if (this.syncPromise) {
+            await this.syncPromise;
+        }
 
         const completedItems: string[] = [];
         let hasChanges = false;
