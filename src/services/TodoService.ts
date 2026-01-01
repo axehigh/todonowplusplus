@@ -49,11 +49,12 @@ export class TodoService {
             return;
         }
 
-        // Wait for any pending saves to finish first
+        // Wait for any pending sync to finish first
         if (this.syncPromise) {
             await this.syncPromise;
         }
 
+        const syncStart = Date.now();
         try {
             this.isSyncing.value = true;
             const content = await this.dropbox.readFile(this.BASE_PATH + this.TODO_FILE_NAME);
@@ -79,6 +80,7 @@ export class TodoService {
 
             this.lists.value = newLists;
             this.lastSyncTime.value = new Date().toISOString();
+            console.log(`Sync (load) completed in ${Date.now() - syncStart}ms`);
         } catch (error) {
             console.error('Error loading todos:', error);
         } finally {
@@ -331,6 +333,7 @@ export class TodoService {
         this.syncPromise = (async () => {
             try {
                 this.isSyncing.value = true;
+                const syncStart = Date.now();
                 do {
                     this.needsSyncAgain = false;
                     let content = '';
@@ -347,6 +350,7 @@ export class TodoService {
                     await this.dropbox.writeFile(this.BASE_PATH + this.TODO_FILE_NAME, content.trim());
                     this.lastSyncTime.value = new Date().toISOString();
                 } while (this.needsSyncAgain);
+                console.log(`Sync (save) completed in ${Date.now() - syncStart}ms`);
             } catch (error) {
                 console.error('Error saving todos to Dropbox:', error);
             } finally {

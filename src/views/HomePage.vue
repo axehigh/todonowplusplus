@@ -141,6 +141,8 @@ import {
 } from '@ionic/vue';
 import {add} from 'ionicons/icons';
 import {computed, ref, watch} from 'vue';
+import {App} from '@capacitor/app';
+import {Capacitor} from '@capacitor/core';
 import {dropboxService, gamificationService, todoService} from '../services';
 import {TodoItem} from '../services/TodoService';
 import MainToolbar from '../components/MainToolbar.vue';
@@ -308,6 +310,23 @@ onIonViewWillEnter(() => {
   // Fire and forget; internal method handles its own loading state
   checkAuth();
 });
+
+// Sync on app state change (foreground/background)
+if (Capacitor.isNativePlatform()) {
+  App.addListener('appStateChange', async ({ isActive }) => {
+    if (isActive) {
+      // App became active, pull latest changes
+      if (dropboxService.isAuthenticated()) {
+        await todoService.loadTodos();
+      }
+    } else {
+      // App going to background, ensure changes are saved
+      if (dropboxService.isAuthenticated()) {
+        await todoService.saveTodos();
+      }
+    }
+  });
+}
 
 const handleRefresh = async (event: any) => {
   try {

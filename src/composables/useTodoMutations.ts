@@ -46,9 +46,14 @@ export function useTodoMutations(options: UseTodoMutationsOptions) {
         }
       }
     } else {
-      await todoService.toggleTodo(selectedListIndex.value, index);
-      if (!wasCompleted && todo.completed) {
-        await handleTaskCompletedEffect(taskId);
+      const list = currentList.value;
+      if (!list) return;
+      const tIndex = list.items.indexOf(todo);
+      if (tIndex !== -1) {
+        await todoService.toggleTodo(selectedListIndex.value, tIndex);
+        if (!wasCompleted && todo.completed) {
+          await handleTaskCompletedEffect(taskId);
+        }
       }
     }
   };
@@ -64,7 +69,12 @@ export function useTodoMutations(options: UseTodoMutationsOptions) {
         }
       }
     } else {
-      await todoService.removeTodo(selectedListIndex.value, index);
+      const list = currentList.value;
+      if (!list) return;
+      const tIndex = list.items.indexOf(todo);
+      if (tIndex !== -1) {
+        await todoService.removeTodo(selectedListIndex.value, tIndex);
+      }
     }
   };
 
@@ -146,6 +156,12 @@ export function useTodoMutations(options: UseTodoMutationsOptions) {
         }
       }
       if (sourceListIndex === -1) return;
+    } else {
+      const list = currentList.value;
+      if (!list) return;
+      const tIndex = list.items.indexOf(todo);
+      if (tIndex === -1) return;
+      sourceTodoIndex = tIndex;
     }
 
     const options = lists.value
@@ -335,6 +351,12 @@ export function useTodoMutations(options: UseTodoMutationsOptions) {
           break;
         }
       }
+    } else {
+      const list = currentList.value;
+      if (!list) return;
+      const tIndex = list.items.indexOf(todo);
+      if (tIndex === -1) return;
+      todoIdx = tIndex;
     }
 
     const AddTodoModal = (await import('../components/AddTodoModal.vue')).default;
