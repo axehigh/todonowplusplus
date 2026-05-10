@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header :translucent="true" class="main-header">
       <ion-toolbar class="gradient-toolbar">
         <ion-buttons slot="start">
           <ion-back-button default-href="/home" color="light"></ion-back-button>
@@ -180,6 +180,10 @@ onIonViewWillEnter(() => {
 </script>
 
 <style scoped>
+.main-header {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
 .priority-badge {
   margin-right: 8px;
   vertical-align: middle;

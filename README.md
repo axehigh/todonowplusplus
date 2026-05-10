@@ -6,8 +6,17 @@ A simple todo app sync with a textfile in dropbox.
 
 <img width="394" height="249" alt="image" src="https://github.com/user-attachments/assets/89af28b6-c84d-4928-b7e2-42fa177355fb" />
 
-**Dropbox**
+### Build Android
+npm run build:android
+
+### Deploy Android
+With Android Studio.
+
+## Dropbox
 https://www.dropbox.com/developers/apps
+
+### Dropbox App Key 
+db-a318e6pi24hal9y
 
 **History**
 An idea I had many years ago was to wrap a todo mobile app 

@@ -1,5 +1,5 @@
 <template>
-  <ion-header :translucent="true">
+  <ion-header :translucent="true" class="main-header">
     <ion-toolbar class="gradient-toolbar">
       <ion-buttons slot="start">
         <ion-menu-button id="btnOpenMenu" color="light" aria-label="Open Menu"></ion-menu-button>
@@ -166,6 +166,10 @@ const onSelectCategory = (value: 'Reminders' | 'Quick' | 'Deep') => {
 </script>
 
 <style scoped>
+.main-header {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
 /* Modern, pill-shaped search bar that respects Ionic theming */
 .searchbar-modern {
   /* Sizing within toolbar */

@@ -1,11 +1,11 @@
 <template>
   <ion-menu content-id="main-content">
     <ion-header>
-      <ion-toolbar color="primary">
+      <ion-toolbar class="gradient-toolbar">
         <ion-title>Lists</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="$emit('add-list')">
-            <ion-icon :icon="addCircleOutline"></ion-icon>
+            <ion-icon :icon="addCircleOutline" color="light"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -39,8 +39,9 @@
           </ion-item>
         </ion-menu-toggle>
 
-        <ion-item-divider>
-          <ion-label>Lists</ion-label>
+        <ion-item-divider class="menu-divider">
+          <ion-icon :icon="listOutline" slot="start" class="divider-icon"></ion-icon>
+          <ion-label>Your Lists</ion-label>
         </ion-item-divider>
 
         <!-- Static list display: no reordering here -->
@@ -73,8 +74,8 @@
           <ion-label color="medium" class="ion-text-center">No lists</ion-label>
         </ion-item>
 
-        <!-- Global Category Filters -->
-        <ion-item-divider>
+        <ion-item-divider class="menu-divider ion-margin-top">
+          <ion-icon :icon="filterOutline" slot="start" class="divider-icon"></ion-icon>
           <ion-label>Quick Filters</ion-label>
         </ion-item-divider>
 
@@ -127,8 +128,8 @@
           </ion-item>
         </ion-menu-toggle>
 
-        <!--Tools-->
-        <ion-item-divider class="ion-margin-top">
+        <ion-item-divider class="menu-divider ion-margin-top">
+          <ion-icon :icon="buildOutline" slot="start" class="divider-icon"></ion-icon>
           <ion-label>Tools</ion-label>
         </ion-item-divider>
         <ion-menu-toggle :auto-hide="true" v-if="isAuthenticated">
@@ -144,8 +145,8 @@
           </ion-item>
         </ion-menu-toggle>
 
-        <!-- Settings-->
-        <ion-item-divider class="ion-margin-top">
+        <ion-item-divider class="menu-divider ion-margin-top">
+          <ion-icon :icon="settingsOutline" slot="start" class="divider-icon"></ion-icon>
           <ion-label>Settings</ion-label>
         </ion-item-divider>
         <ion-menu-toggle :auto-hide="true">
@@ -185,6 +186,8 @@ import {
   checkmarkDoneOutline,
   timeOutline,
   settingsOutline,
+  filterOutline,
+  buildOutline,
 } from 'ionicons/icons';
 import type { TodoList } from '../services/TodoService';
 import { computed } from 'vue';
@@ -219,6 +222,35 @@ const searchTextProxy = computed({
 }
 .menu-searchbar {
   --border-radius: 9999px;
+}
+
+.menu-divider {
+  background: transparent;
+  --padding-start: 16px;
+  --padding-top: 20px;
+  --padding-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--ion-color-step-500);
+}
+
+.divider-icon {
+  font-size: 1rem;
+  margin-right: 8px;
+  color: var(--ion-color-primary);
+}
+
+.list-item {
+  --border-radius: 12px;
+  margin: 2px 8px;
+  --padding-start: 8px;
+  font-weight: 500;
+}
+
+.list-item[color="secondary"] {
+  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* Hide the side menu search on larger (desktop) viewports */

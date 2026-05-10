@@ -88,7 +88,7 @@
         v-model="note"
         placeholder="Add more details..."
         :auto-grow="true"
-        rows="3"
+        :rows="3"
       ></ion-textarea>
     </ion-item>
 

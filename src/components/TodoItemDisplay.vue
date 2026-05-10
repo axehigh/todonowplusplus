@@ -14,39 +14,36 @@
         {{ todo.note }}
       </p>
       <div class="todo-meta" v-if="todo.priority || todo.category || todo.dueDate || todo.timeSpent">
-        <span class="meta-group">
+        <div class="meta-row">
           <ion-badge
             v-if="todo.priority"
             :color="getPriorityColor(todo.priority)"
             class="priority-badge"
           >{{ todo.priority }}</ion-badge>
-          <!-- Category: icon only in the list -->
-          <ion-icon
-            v-if="todo.category"
-            :icon="getCategoryIcon(todo.category)"
-            :color="getCategoryColor(todo.category)"
-            size="small"
-            class="category-icon"
-          />
-        </span>
-        <span class="meta-group" v-if="todo.dueDate">
-          <ion-icon :icon="calendarOutline" size="small" />
-          <span class="meta-text">{{ todo.dueDate }}</span>
-          <ion-text
-            color="danger"
-            v-if="isOverdue(todo.dueDate)"
-            class="ion-margin-start meta-text"
-          >(Overdue)</ion-text>
-          <ion-text
-            color="warning"
-            v-if="isDueToday(todo.dueDate)"
-            class="ion-margin-start meta-text"
-          >(Today)</ion-text>
-        </span>
-        <span class="meta-group time-spent" v-if="todo.timeSpent">
-          <ion-icon :icon="timeOutline" size="small" />
-          <span class="meta-text">{{ formatTimeSpent(todo.timeSpent) }}</span>
-        </span>
+          
+          <span class="meta-item" v-if="todo.category">
+            <ion-icon
+              :icon="getCategoryIcon(todo.category)"
+              :color="getCategoryColor(todo.category)"
+              size="small"
+            />
+            <span class="meta-text">{{ todo.category }}</span>
+          </span>
+
+          <span class="meta-item" v-if="todo.dueDate">
+            <ion-icon :icon="calendarOutline" size="small" />
+            <span class="meta-text" :class="{ 'overdue-text': isOverdue(todo.dueDate), 'today-text': isDueToday(todo.dueDate) }">
+              {{ todo.dueDate }}
+              <span v-if="isOverdue(todo.dueDate)">(Overdue)</span>
+              <span v-else-if="isDueToday(todo.dueDate)">(Today)</span>
+            </span>
+          </span>
+
+          <span class="meta-item" v-if="todo.timeSpent">
+            <ion-icon :icon="timeOutline" size="small" />
+            <span class="meta-text">{{ formatTimeSpent(todo.timeSpent) }}</span>
+          </span>
+        </div>
       </div>
     </ion-label>
     <ion-reorder slot="end" />
@@ -155,39 +152,42 @@ const isDueToday = (dateStr?: string) => todoService.isDueToday(dateStr);
 }
 
 .todo-meta {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  align-items: center;
-  font-size: 0.8rem;
+  margin-top: 6px;
 }
 
-.meta-group {
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.meta-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  color: var(--ion-color-step-600);
+  font-size: 0.75rem;
 }
 
 .meta-text {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+}
+
+.overdue-text {
+  color: var(--ion-color-danger);
+  font-weight: 600;
+}
+
+.today-text {
+  color: var(--ion-color-warning);
+  font-weight: 600;
 }
 
 .priority-badge {
-  margin-right: 4px;
-}
-
-.category-badge {
-  margin-right: 4px;
-}
-
-.time-spent {
-  margin-left: 0;
-}
-
-.category-icon {
-  margin-right: 6px;
-  vertical-align: middle;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 </style>
 

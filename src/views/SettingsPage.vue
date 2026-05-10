@@ -1,9 +1,9 @@
 <template>
   <ion-page>
     <ion-header>
-      <ion-toolbar>
+      <ion-toolbar class="gradient-toolbar">
         <ion-buttons slot="start">
-          <ion-back-button default-href="/home"></ion-back-button>
+          <ion-back-button default-href="/home" color="light"></ion-back-button>
         </ion-buttons>
         <ion-title>Settings</ion-title>
       </ion-toolbar>
