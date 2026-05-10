@@ -18,7 +18,9 @@
     <ion-item v-if="isEdit && listNames.length > 1">
       <ion-label>List</ion-label>
       <ion-select v-model.number="selectedListIndex" interface="popover">
-        <ion-select-option v-for="(name, idx) in listNames" :key="idx" :value="idx">{{ name }}</ion-select-option>
+        <ion-select-option v-for="list in sortedLists" :key="list.originalIndex" :value="list.originalIndex">
+          {{ list.name }}
+        </ion-select-option>
       </ion-select>
     </ion-item>
 
@@ -37,14 +39,8 @@
       <ion-label>Category</ion-label>
       <ion-select v-model="category" interface="popover">
         <ion-select-option value="">None</ion-select-option>
-        <ion-select-option value="Quick">
-          Quick
-        </ion-select-option>
-        <ion-select-option value="Deep">
-          Deep
-        </ion-select-option>
-        <ion-select-option value="Reminders">
-          Reminders
+        <ion-select-option v-for="cat in sortedCategories" :key="cat" :value="cat">
+          {{ cat }}
         </ion-select-option>
       </ion-select>
     </ion-item>
@@ -86,6 +82,16 @@
       ></ion-input>
     </ion-item>
 
+    <ion-item>
+      <ion-label position="stacked">Note</ion-label>
+      <ion-textarea
+        v-model="note"
+        placeholder="Add more details..."
+        :auto-grow="true"
+        rows="3"
+      ></ion-textarea>
+    </ion-item>
+
     <div class="ion-padding-top">
       <ion-button expand="block" @click="save" :disabled="!text">{{ isEdit ? 'Save' : 'Add Task' }}</ion-button>
     </div>
@@ -93,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonSelect, IonSelectOption, IonModal, IonDatetime, IonText, IonIcon, modalController } from '@ionic/vue';
+import { IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonItem, IonLabel, IonInput, IonTextarea, IonSelect, IonSelectOption, IonModal, IonDatetime, IonText, IonIcon, modalController } from '@ionic/vue';
 import { calendarOutline } from 'ionicons/icons';
 import { ref, computed, watch } from 'vue';
 
@@ -106,6 +112,7 @@ const props = defineProps<{
   initialCategory?: string;
   initialDueDate?: string; // YYYY-MM-DD
   initialTimeSpent?: number; // minutes
+  initialNote?: string;
   listNames?: string[];
   initialListIndex?: number;
 }>();
@@ -117,8 +124,20 @@ const priority = ref(props.initialPriority || '');
 const category = ref(props.initialCategory || '');
 const dueDate = ref(props.initialDueDate || '');
 const timeSpentLocal = ref<number | undefined>(props.initialTimeSpent);
+const note = ref(props.initialNote || '');
 const listNames = computed(() => props.listNames ?? []);
 const selectedListIndex = ref<number>(typeof props.initialListIndex === 'number' ? props.initialListIndex : 0);
+
+const sortedCategories = computed(() => {
+  const cats = ['Quick', 'Deep', 'Reminders'];
+  return cats.sort((a, b) => a.localeCompare(b));
+});
+
+const sortedLists = computed(() => {
+  return listNames.value
+    .map((name, index) => ({ name, originalIndex: index }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+});
 
 const cancel = () => {
   modalController.dismiss(null, 'cancel');
@@ -151,6 +170,10 @@ const save = () => {
       todoString += ` cat:${category.value}`;
     }
 
+    if (note.value) {
+      todoString += ` note:${note.value.replace(/\n/g, '\\n')}`;
+    }
+
     modalController.dismiss(todoString, 'confirm');
   } else {
     // Return structured updates for editing
@@ -158,6 +181,7 @@ const save = () => {
       text: text.value,
       priority: priority.value || '',
       category: category.value || '',
+      note: note.value || '',
     };
 
     // Only persist dueDate for Reminders; otherwise clear it

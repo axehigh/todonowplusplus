@@ -15,6 +15,7 @@ export interface TodoItem {
     contexts: string[];
     category?: TaskCategory;
     timeSpent?: number; // Time spent in minutes (for Long Task category)
+    note?: string;
 }
 
 export interface TodoList {
@@ -137,6 +138,14 @@ export class TodoService {
             item.timeSpent = parseInt(spentMatch[1], 10);
             item.text = item.text.replace(spentRegex, '').trim();
         }
+        
+        // 6. Note (note:Longer text)
+        const noteRegex = /\bnote:(.+)$/;
+        const noteMatch = item.text.match(noteRegex);
+        if (noteMatch) {
+            item.note = noteMatch[1].trim().replace(/\\n/g, '\n');
+            item.text = item.text.replace(noteRegex, '').trim();
+        }
 
         return item;
     }
@@ -207,7 +216,7 @@ export class TodoService {
         await this.saveTodos();
     }
 
-    async updateTodo(listIndex: number, todoIndex: number, updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent'>>) {
+    async updateTodo(listIndex: number, todoIndex: number, updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent' | 'note'>>) {
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;
 
@@ -219,6 +228,7 @@ export class TodoService {
         if (updates.dueDate !== undefined) item.dueDate = updates.dueDate || undefined;
         if (updates.category !== undefined) item.category = updates.category || undefined;
         if (updates.timeSpent !== undefined) item.timeSpent = updates.timeSpent;
+        if (updates.note !== undefined) item.note = updates.note || undefined;
 
         // If the text changed, update the game tracking file to keep IDs in sync
         if (this.gameTracker && updates.text !== undefined && oldText !== updates.text) {
@@ -397,6 +407,10 @@ export class TodoService {
 
         if (item.timeSpent !== undefined && item.timeSpent > 0) {
             line += ` spent:${item.timeSpent}`;
+        }
+
+        if (item.note) {
+            line += ` note:${item.note.replace(/\n/g, '\\n')}`;
         }
 
         return line.trim();

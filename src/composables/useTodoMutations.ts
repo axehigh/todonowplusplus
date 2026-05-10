@@ -371,6 +371,7 @@ export function useTodoMutations(options: UseTodoMutationsOptions) {
         initialDueDate: todo.dueDate || '',
         initialTimeSpent:
           typeof todo.timeSpent === 'number' ? todo.timeSpent : undefined,
+        initialNote: todo.note || '',
         listNames: lists.value.map((l) => l.name),
         initialListIndex: listIdx,
       },
@@ -385,6 +386,7 @@ export function useTodoMutations(options: UseTodoMutationsOptions) {
           dueDate: updates.dueDate,
           category: updates.category,
           timeSpent: updates.timeSpent,
+          note: updates.note,
         });
 
         const toListIdx: number | undefined = updates.moveToListIndex;

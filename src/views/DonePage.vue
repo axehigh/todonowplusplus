@@ -60,6 +60,7 @@
               <ion-badge v-if="todo.category" :color="getCategoryColor(todo.category)" class="category-badge">{{ todo.category }}</ion-badge>
               {{ todo.text }}
             </h2>
+            <p v-if="todo.note" class="todo-note">{{ todo.note }}</p>
             <p class="meta" v-if="todo.completedDate || todo.dueDate || todo.timeSpent">
               <span v-if="todo.completedDate">
                 <ion-icon :icon="checkmarkDoneCircleOutline" size="small"></ion-icon>
@@ -201,5 +202,12 @@ onIonViewWillEnter(() => {
 
 .done-category-segment {
   margin-top: 4px;
+}
+
+.todo-note {
+  margin: 4px 0 8px 0;
+  font-size: 0.85rem;
+  color: var(--ion-color-step-600, #666);
+  white-space: pre-wrap;
 }
 </style>

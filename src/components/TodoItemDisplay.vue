@@ -10,6 +10,9 @@
       <h2 class="todo-title">
         {{ todo.text }}
       </h2>
+      <p class="todo-note" v-if="todo.note">
+        {{ todo.note }}
+      </p>
       <div class="todo-meta" v-if="todo.priority || todo.category || todo.dueDate || todo.timeSpent">
         <span class="meta-group">
           <ion-badge
@@ -138,6 +141,17 @@ const isDueToday = (dateStr?: string) => todoService.isDueToday(dateStr);
   margin: 0;
   font-size: 1rem;
   line-height: 1.3;
+}
+
+.todo-note {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--ion-color-step-600, #666);
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .todo-meta {
