@@ -157,7 +157,7 @@ export class TodoService {
         // We just append the raw text. The user can type "due:..." or "(A) ..." manually if they want,
         // or we can add UI helpers later.
         const newItem = this.parseTodoLine(todoText.trim());
-        this.lists.value[listIndex].items.push(newItem);
+        this.lists.value[listIndex].items.unshift(newItem);
         await this.saveTodos();
     }
 
