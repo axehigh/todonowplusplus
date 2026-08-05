@@ -33,7 +33,13 @@ export class TodoService {
     public isSyncing = ref<boolean>(false);
     public lastSyncTime = ref<string | null>(null);
     private syncPromise: Promise<void> | null = null;
+    private loadPromise: Promise<void> | null = null;
     private needsSyncAgain = false;
+    private dirty = false;
+
+    private markDirty() {
+        this.dirty = true;
+    }
 
     constructor(dropbox: DropboxService) {
         this.dropbox = dropbox;
@@ -50,42 +56,55 @@ export class TodoService {
             return;
         }
 
-        // Wait for any pending sync to finish first
+        // Wait for any pending save and any previous load to finish first, so we
+        // never read mid-write and never run concurrent loads.
         if (this.syncPromise) {
             await this.syncPromise;
         }
+        if (this.loadPromise) {
+            await this.loadPromise;
+        }
 
-        const syncStart = Date.now();
-        try {
-            this.isSyncing.value = true;
-            const content = await this.dropbox.readFile(this.BASE_PATH + this.TODO_FILE_NAME);
-            const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        this.loadPromise = (async () => {
+            const syncStart = Date.now();
+            try {
+                this.isSyncing.value = true;
+                const content = await this.dropbox.readFile(this.BASE_PATH + this.TODO_FILE_NAME);
+                const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-            const newLists: TodoList[] = [];
-            let currentList: TodoList = { name: 'General', items: [] };
+                const newLists: TodoList[] = [];
+                let currentList: TodoList = { name: 'General', items: [] };
 
-            for (const line of lines) {
-                if (line.startsWith('#')) {
-                    if (currentList.items.length > 0 || currentList.name !== 'General') {
-                        newLists.push(currentList);
+                for (const line of lines) {
+                    if (line.startsWith('#')) {
+                        if (currentList.items.length > 0 || currentList.name !== 'General') {
+                            newLists.push(currentList);
+                        }
+                        currentList = { name: line.substring(1).trim(), items: [] };
+                    } else {
+                        currentList.items.push(this.parseTodoLine(line));
                     }
-                    currentList = { name: line.substring(1).trim(), items: [] };
-                } else {
-                    currentList.items.push(this.parseTodoLine(line));
                 }
-            }
 
-            if (currentList.items.length > 0 || currentList.name !== 'General' || newLists.length === 0) {
-                newLists.push(currentList);
-            }
+                if (currentList.items.length > 0 || currentList.name !== 'General' || newLists.length === 0) {
+                    newLists.push(currentList);
+                }
 
-            this.lists.value = newLists;
-            this.lastSyncTime.value = new Date().toISOString();
-            console.log(`Sync (load) completed in ${Date.now() - syncStart}ms`);
-        } catch (error) {
-            console.error('Error loading todos:', error);
+                this.lists.value = newLists;
+                this.dirty = false;
+                this.lastSyncTime.value = new Date().toISOString();
+                console.log(`Sync (load) completed in ${Date.now() - syncStart}ms`);
+            } catch (error) {
+                console.error('Error loading todos:', error);
+            } finally {
+                this.isSyncing.value = false;
+            }
+        })();
+
+        try {
+            await this.loadPromise;
         } finally {
-            this.isSyncing.value = false;
+            this.loadPromise = null;
         }
     }
 
@@ -153,6 +172,7 @@ export class TodoService {
     async addTodo(listIndex: number, todoText: string) {
         if (!todoText.trim()) return;
         if (!this.lists.value[listIndex]) return;
+        this.markDirty();
 
         // We just append the raw text. The user can type "due:..." or "(A) ..." manually if they want,
         // or we can add UI helpers later.
@@ -166,6 +186,7 @@ export class TodoService {
         // saveTodos() will handle queuing the sync if one is already in flight.
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;
+        this.markDirty();
 
         const item = list.items[todoIndex];
         item.completed = !item.completed;
@@ -182,18 +203,21 @@ export class TodoService {
 
     async addList(name: string) {
         if (!name.trim()) return;
+        this.markDirty();
         this.lists.value.push({ name: name.trim(), items: [] });
         await this.saveTodos();
     }
 
     async removeTodo(listIndex: number, todoIndex: number) {
         if (!this.lists.value[listIndex]) return;
+        this.markDirty();
         this.lists.value[listIndex].items.splice(todoIndex, 1);
         await this.saveTodos();
     }
 
     async reorderTodos(listIndex: number, from: number, to: number) {
         if (!this.lists.value[listIndex]) return;
+        this.markDirty();
         const list = this.lists.value[listIndex];
         const itemToMove = list.items.splice(from, 1)[0];
         list.items.splice(to, 0, itemToMove);
@@ -209,6 +233,7 @@ export class TodoService {
         const fromList = this.lists.value[fromListIndex];
         const toList = this.lists.value[toListIndex];
         if (!fromList || !toList) return;
+        this.markDirty();
         if (todoIndex < 0 || todoIndex >= fromList.items.length) return;
 
         const [item] = fromList.items.splice(todoIndex, 1);
@@ -219,6 +244,7 @@ export class TodoService {
     async updateTodo(listIndex: number, todoIndex: number, updates: Partial<Pick<TodoItem, 'text' | 'priority' | 'dueDate' | 'category' | 'timeSpent' | 'note'>>) {
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;
+        this.markDirty();
 
         const item = list.items[todoIndex];
         const oldText = item.text;
@@ -245,6 +271,7 @@ export class TodoService {
     async renameList(listIndex: number, newName: string) {
         if (!newName.trim()) return;
         if (!this.lists.value[listIndex]) return;
+        this.markDirty();
 
         this.lists.value[listIndex].name = newName.trim();
         await this.saveTodos();
@@ -267,6 +294,7 @@ export class TodoService {
      */
     async removeList(listIndex: number) {
         if (!this.lists.value[listIndex]) return;
+        this.markDirty();
         this.lists.value.splice(listIndex, 1);
         await this.saveTodos();
     }
@@ -278,6 +306,7 @@ export class TodoService {
         const from = this.lists.value[fromIndex];
         const to = this.lists.value[toIndex];
         if (!from || !to) return;
+        this.markDirty();
 
         const remaining: TodoItem[] = [];
         for (const item of from.items) {
@@ -304,6 +333,7 @@ export class TodoService {
     async updateTimeSpent(listIndex: number, todoIndex: number, minutes: number) {
         const list = this.lists.value[listIndex];
         if (!list || !list.items[todoIndex]) return;
+        this.markDirty();
 
         const item = list.items[todoIndex];
         item.timeSpent = (item.timeSpent || 0) + minutes;
@@ -317,6 +347,7 @@ export class TodoService {
 
         const targetIndex = direction === 'up' ? listIndex - 1 : listIndex + 1;
         if (targetIndex < 0 || targetIndex >= lists.length) return;
+        this.markDirty();
 
         const [moved] = lists.splice(listIndex, 1);
         lists.splice(targetIndex, 0, moved);
@@ -332,8 +363,19 @@ export class TodoService {
         this.moveList(index, 'down');
     }
 
-    public async saveTodos() {
+    public async saveTodos(force = false) {
         if (!this.dropbox.isAuthenticated()) return;
+
+        // If a load is in flight, wait for it to populate `lists` so we never
+        // upload empty/stale in-memory state over the remote file.
+        if (this.loadPromise) {
+            await this.loadPromise;
+        }
+
+        // If nothing changed since the last successful load/save, skip the write
+        // (unless forced). This prevents background flushes or stale call sites
+        // from clobbering Dropbox with data that isn't derived from a user action.
+        if (!force && !this.dirty) return;
 
         if (this.syncPromise) {
             this.needsSyncAgain = true;
@@ -346,6 +388,7 @@ export class TodoService {
                 const syncStart = Date.now();
                 do {
                     this.needsSyncAgain = false;
+                    this.dirty = false;
                     let content = '';
 
                     for (const list of this.lists.value) {
@@ -363,6 +406,8 @@ export class TodoService {
                 console.log(`Sync (save) completed in ${Date.now() - syncStart}ms`);
             } catch (error) {
                 console.error('Error saving todos to Dropbox:', error);
+                // Keep the dirty flag so a later save retries the pending change.
+                this.dirty = true;
             } finally {
                 this.isSyncing.value = false;
                 this.syncPromise = null;
@@ -431,14 +476,12 @@ export class TodoService {
     async archiveCompletedTodos() {
         if (!this.dropbox.isAuthenticated()) return;
 
-        // If a sync is already in progress, it might be better to wait or let it finish.
-        // But since archive modifies the list, we should probably treat it as a mutation that triggers a sync.
-        // However, archive also writes to done.txt.
-
-        // We can't easily queue archive without making a more complex queue.
-        // Let's at least wait for current sync before starting archive.
+        // Wait for any in-flight save/load so we operate on settled state.
         if (this.syncPromise) {
             await this.syncPromise;
+        }
+        if (this.loadPromise) {
+            await this.loadPromise;
         }
 
         const completedItems: string[] = [];
@@ -459,6 +502,7 @@ export class TodoService {
         }
 
         if (!hasChanges) return;
+        this.markDirty();
 
         // 2. Append to done.txt
         if (completedItems.length > 0) {
@@ -479,7 +523,7 @@ export class TodoService {
                 }
 
                 const newDoneContent = (currentDone + doneContent).trim() + '\n';
-                await this.dropbox.writeFile(this.DONE_FILE_NAME, newDoneContent);
+                await this.dropbox.writeFile(this.BASE_PATH + this.DONE_FILE_NAME, newDoneContent);
                 this.lastSyncTime.value = new Date().toISOString();
             } catch (e) {
                 console.error('Failed to archive completed todos to ' + this.DONE_FILE_NAME, e);

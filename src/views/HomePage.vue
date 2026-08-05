@@ -384,8 +384,8 @@ const onReorderLists = ({ from, to }: { from: number; to: number }) => {
 
   const [moved] = listsArr.splice(from, 1);
   listsArr.splice(to, 0, moved);
-  // Persist order
-  todoService.saveTodos();
+  // Persist order (direct mutation, so force the write)
+  todoService.saveTodos(true);
 };
 
 const handleToolbarCategoryClick = (value: 'Reminders' | 'Quick' | 'Deep') => {

@@ -93,8 +93,8 @@ const handleReorder = (event: CustomEvent) => {
   arr.splice(to, 0, moved);
   detail.complete();
 
-  // Persist the new order in todo.txt via existing save logic
-  todoService.saveTodos();
+  // Persist the new order in todo.txt via existing save logic (direct mutation, so force)
+  todoService.saveTodos(true);
 };
 
 const handleRename = async (index: number, newName: string) => {
